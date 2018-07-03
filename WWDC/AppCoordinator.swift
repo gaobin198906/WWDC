@@ -317,6 +317,9 @@ final class AppCoordinator {
         windowController.contentViewController = tabController
         windowController.showWindow(self)
 
+        windowController.window?.toolbar?.insertItem(withItemIdentifier: .init("MyThing"), at: 5)
+        windowController.window?.toolbar?.insertItem(withItemIdentifier: .flexibleSpace, at: 6)
+
         if storage.isEmpty {
             tabController.showLoading()
         }

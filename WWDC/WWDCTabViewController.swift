@@ -98,7 +98,25 @@ class WWDCTabViewController<Tab: RawRepresentable>: NSTabViewController where Ta
         return defaultItemIdentifiers
     }
 
+    @objc
+    func test(sender: NSButton) {
+        self.presentViewController(DownloadsStatusViewController(nibName: nil, bundle: nil), asPopoverRelativeTo: sender.frame, of: sender, preferredEdge: .maxY, behavior: .semitransient)
+    }
+
     override func toolbar(_ toolbar: NSToolbar, itemForItemIdentifier itemIdentifier: NSToolbarItem.Identifier, willBeInsertedIntoToolbar flag: Bool) -> NSToolbarItem? {
+
+        if itemIdentifier.rawValue == "MyThing" {
+            let item = NSToolbarItem(itemIdentifier: itemIdentifier)
+
+            let b = NSButton(title: "Downloads", target: self, action: #selector(test))
+            b.sizeToFit()
+
+            item.view = b
+
+            item.minSize = b.bounds.size
+            item.maxSize = b.bounds.size
+            return item
+        }
         guard let tabItem = tabItem(with: itemIdentifier.rawValue) else { return nil }
 
         let itemView = TabItemView(frame: .zero)
