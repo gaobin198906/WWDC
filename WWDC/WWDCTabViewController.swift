@@ -92,15 +92,26 @@ class WWDCTabViewController<Tab: RawRepresentable>: NSTabViewController where Ta
         // Center the tab bar's NSToolbarItem's be putting flexible space at the beginning and end of
         // the array. Super's implementation returns the NSToolbarItems that represent the NSTabViewItems
         var defaultItemIdentifiers = super.toolbarDefaultItemIdentifiers(toolbar)
-        defaultItemIdentifiers.insert(.flexibleSpace, at: 0)
-        defaultItemIdentifiers.append(.flexibleSpace)
+//        defaultItemIdentifiers.insert(.flexibleSpace, at: 0)
+        defaultItemIdentifiers.insert(.init(rawValue: "MyThing"), at: 0)
+//        defaultItemIdentifiers.insert(.flexibleSpace, at: 2)
+//        defaultItemIdentifiers.append(.flexibleSpace)
+        defaultItemIdentifiers.append(.init(rawValue: "MyThing"))
+//        defaultItemIdentifiers.append(.flexibleSpace)
+
+//        windowController.window?.toolbar?.insertItem(withItemIdentifier: .init("MyThing"), at: 5)
+//        windowController.window?.toolbar?.insertItem(withItemIdentifier: .flexibleSpace, at: 6)
 
         return defaultItemIdentifiers
     }
 
     @objc
     func test(sender: NSButton) {
-        self.presentViewController(DownloadsStatusViewController(nibName: nil, bundle: nil), asPopoverRelativeTo: sender.frame, of: sender, preferredEdge: .maxY, behavior: .semitransient)
+        if presentedViewControllers?.isEmpty == true {
+            self.presentViewController(DownloadsStatusViewController(nibName: nil, bundle: nil), asPopoverRelativeTo: sender.frame, of: sender, preferredEdge: .maxY, behavior: .semitransient)
+        } else {
+            presentedViewControllers?.forEach(dismissViewController)
+        }
     }
 
     override func toolbar(_ toolbar: NSToolbar, itemForItemIdentifier itemIdentifier: NSToolbarItem.Identifier, willBeInsertedIntoToolbar flag: Bool) -> NSToolbarItem? {
@@ -114,7 +125,7 @@ class WWDCTabViewController<Tab: RawRepresentable>: NSTabViewController where Ta
             item.view = b
 
             item.minSize = b.bounds.size
-            item.maxSize = b.bounds.size
+            item.maxSize = CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
             return item
         }
         guard let tabItem = tabItem(with: itemIdentifier.rawValue) else { return nil }
@@ -164,4 +175,21 @@ class WWDCTabViewController<Tab: RawRepresentable>: NSTabViewController where Ta
         loadingView?.hide()
     }
 
+}
+
+extension NSWindow {
+
+    func toolbarHeight() -> CGFloat {
+        var toolbarHeight = CGFloat(0.0)
+        var windowFrame: NSRect
+
+        if let toolbar = toolbar,
+            toolbar.isVisible {
+
+            windowFrame = NSWindow.contentRect(forFrameRect: self.frame, styleMask: self.styleMask)
+            toolbarHeight = windowFrame.height - (self.contentView?.frame)!.height
+        }
+
+        return toolbarHeight
+    }
 }
