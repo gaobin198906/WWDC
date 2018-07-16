@@ -74,6 +74,12 @@ class WWDCTabViewController<Tab: RawRepresentable>: NSTabViewController where Ta
         return tabViewItems.first { $0.identifier as? String == identifier }
     }
 
+    override func viewDidAppear() {
+        super.viewDidAppear()
+
+
+    }
+
     override func transition(from fromViewController: NSViewController, to toViewController: NSViewController, options: NSViewController.TransitionOptions = [], completionHandler completion: (() -> Void)? = nil) {
 
         // Disable the crossfade animation here instead of removing it from the transition options
@@ -93,10 +99,11 @@ class WWDCTabViewController<Tab: RawRepresentable>: NSTabViewController where Ta
         // the array. Super's implementation returns the NSToolbarItems that represent the NSTabViewItems
         var defaultItemIdentifiers = super.toolbarDefaultItemIdentifiers(toolbar)
 //        defaultItemIdentifiers.insert(.flexibleSpace, at: 0)
-        defaultItemIdentifiers.insert(.init(rawValue: "MyThing"), at: 0)
+        defaultItemIdentifiers.insert(.wwdcTabLeadingStackView, at: 0)
+//        defaultItemIdentifiers.insert(.flexibleSpace, at: 1)
 //        defaultItemIdentifiers.insert(.flexibleSpace, at: 2)
 //        defaultItemIdentifiers.append(.flexibleSpace)
-        defaultItemIdentifiers.append(.init(rawValue: "MyThing"))
+        defaultItemIdentifiers.append(.wwdcTabTrailingStackView)
 //        defaultItemIdentifiers.append(.flexibleSpace)
 
 //        windowController.window?.toolbar?.insertItem(withItemIdentifier: .init("MyThing"), at: 5)
@@ -108,24 +115,56 @@ class WWDCTabViewController<Tab: RawRepresentable>: NSTabViewController where Ta
     @objc
     func test(sender: NSButton) {
         if presentedViewControllers?.isEmpty == true {
-            self.presentViewController(DownloadsStatusViewController(nibName: nil, bundle: nil), asPopoverRelativeTo: sender.frame, of: sender, preferredEdge: .maxY, behavior: .semitransient)
+            self.presentViewController(DownloadsStatusViewController(nibName: nil, bundle: nil), asPopoverRelativeTo: sender.bounds, of: sender, preferredEdge: .maxY, behavior: .semitransient)
         } else {
             presentedViewControllers?.forEach(dismissViewController)
         }
     }
 
+    func makeTabCenteringItem(identifier: NSToolbarItem.Identifier) -> NSToolbarItem {
+        let item = NSToolbarItem(itemIdentifier: identifier)
+
+        let stackView = NSStackView()
+        stackView.translatesAutoresizingMaskIntoConstraints = true
+        stackView.autoresizingMask = [.width, .height, .minXMargin, .maxXMargin]
+        item.view = stackView
+
+        item.minSize = .zero
+        item.maxSize = CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
+        return item
+    }
+
+    func addTrailingTabItem(view: NSView) {
+
+    }
+
     override func toolbar(_ toolbar: NSToolbar, itemForItemIdentifier itemIdentifier: NSToolbarItem.Identifier, willBeInsertedIntoToolbar flag: Bool) -> NSToolbarItem? {
 
-        if itemIdentifier.rawValue == "MyThing" {
-            let item = NSToolbarItem(itemIdentifier: itemIdentifier)
+//        if [.wwdcTabTrailingStackView, .wwdcTabLeadingStackView].contains(itemIdentifier) {
+//            let simpleItem = NSToolbarItem(itemIdentifier: itemIdentifier)
+//
+//            let b = NSButton(title: itemIdentifier == .wwdcTabLeadingStackView ? "Leading" : "Downloads", target: self, action: #selector(test))
+////            let b2 = NSButton(title: itemIdentifier == .wwdcTabLeadingStackView ? "Leading" : "Downloads", target: self, action: #selector(test))
+//            b.sizeToFit()
+////            b2.sizeToFit()
+//            simpleItem.view = b
+//
+////            stack.addView(b, in: .center)
+////            stack.addView(b2, in: .center)
+//            simpleItem.minSize = b.bounds.size
+//            simpleItem.maxSize = b.bounds.size//CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
+//
+//            return simpleItem
+//        }
+        if [.wwdcTabTrailingStackView, .wwdcTabLeadingStackView].contains(itemIdentifier) {
+            let item = makeTabCenteringItem(identifier: itemIdentifier)
 
-            let b = NSButton(title: "Downloads", target: self, action: #selector(test))
-            b.sizeToFit()
-
-            item.view = b
-
-            item.minSize = b.bounds.size
-            item.maxSize = CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
+            if itemIdentifier == .wwdcTabTrailingStackView {
+                let b = NSButton(title: itemIdentifier == .wwdcTabLeadingStackView ? "Leading" : "Downloads", target: self, action: #selector(test))
+                b.sizeToFit()
+                
+                (item.view as! NSStackView).addView(b, in: .center)
+            }
             return item
         }
         guard let tabItem = tabItem(with: itemIdentifier.rawValue) else { return nil }
@@ -175,6 +214,11 @@ class WWDCTabViewController<Tab: RawRepresentable>: NSTabViewController where Ta
         loadingView?.hide()
     }
 
+}
+
+extension NSToolbarItem.Identifier {
+    fileprivate static let wwdcTabLeadingStackView = NSToolbarItem.Identifier("MyThingLeading")
+    fileprivate static let wwdcTabTrailingStackView = NSToolbarItem.Identifier("MyThingTrailing")
 }
 
 extension NSWindow {
