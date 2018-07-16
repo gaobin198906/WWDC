@@ -19,76 +19,27 @@ final class WWDCTitleBarViewController: NSTitlebarAccessoryViewController {
     override func loadView() {
         let view = NSView(frame: NSRect(x: 0, y: 0, width: 300, height: 100))
 
-        view.layer?.backgroundColor = NSColor.clear.cgColor
-        let tabItem = TabItemView(frame: NSRect(x: 0, y: 10, width: 100, height: 50))
-        tabItem.title = "0"
-        tabItem.state = .off
+        tabBar.translatesAutoresizingMaskIntoConstraints = false
 
-        tabItem.target = self
-        tabItem.action = #selector(changeTab)
+        view.addSubview(tabBar)
+        tabBar.centerXAnchor.constraint(equalTo: view.centerXAnchor).isActive = true
+        tabBar.centerYAnchor.constraint(equalTo: view.centerYAnchor).isActive = true
+        tabBar.leadingAnchor.constraint(greaterThanOrEqualTo: view.leadingAnchor).isActive = true
+        tabBar.trailingAnchor.constraint(greaterThanOrEqualTo: view.trailingAnchor).isActive = true
 
-        let tabItem1 = TabItemView(frame: NSRect(x: 100, y: 10, width: 100, height: 50))
-        tabItem1.title = "1"
-        tabItem1.state = .off
-
-        tabItem1.target = self
-        tabItem1.action = #selector(changeTab)
-
-        let tabItem2 = TabItemView(frame: NSRect(x: 200, y: 10, width: 100, height: 50))
-        tabItem2.title = "2"
-        tabItem2.state = .off
-
-        tabItem2.target = self
-        tabItem2.action = #selector(changeTab)
-
-        view.addSubview(tabItem)
-        view.addSubview(tabItem1)
-        view.addSubview(tabItem2)
         self.view = view
     }
 
-    @objc
-    func changeTab(sender: TabItemView) {
-        tabBarController.selectedTabViewItemIndex = Int(sender.title!)!
-        sender.state = .on
-    }
+    let tabBar: WWDCTabBar
 
-    let tabBarController: NSTabViewController
-
-    var passThroughDelegate: NSTabViewDelegate?
-
-    init<T>(tabBarController: WWDCTabViewController<T>) {
-
-        self.tabBarController = tabBarController
-        passThroughDelegate = tabBarController.tabView.delegate
-
+    init(tabBar: WWDCTabBar) {
+        self.tabBar = tabBar
 
         super.init(nibName: nil, bundle: nil)
-
-//        tabBarController.tabView.delegate = self
     }
 
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
-    }
-}
-
-extension WWDCTitleBarViewController: NSTabViewDelegate {
-
-    public func tabView(_ tabView: NSTabView, shouldSelect tabViewItem: NSTabViewItem?) -> Bool {
-        return true
-    }
-
-    public func tabView(_ tabView: NSTabView, willSelect tabViewItem: NSTabViewItem?) {
-
-    }
-
-    public func tabView(_ tabView: NSTabView, didSelect tabViewItem: NSTabViewItem?) {
-
-    }
-
-    public func tabViewDidChangeNumberOfTabViewItems(_ tabView: NSTabView) {
-        passThroughDelegate?.tabViewDidChangeNumberOfTabViewItems?(tabView)
     }
 }
 
@@ -155,11 +106,8 @@ final class AppCoordinator {
 
         tabController = WWDCTabViewController(windowController: windowController)
 
-        let vc = WWDCTitleBarViewController(tabBarController: tabController)
-
+        let vc = WWDCTitleBarViewController(tabBar: tabController.tabBar)
         vc.layoutAttribute = .top
-        vc.fullScreenMinHeight = 0
-
         windowController.window!.addTitlebarAccessoryViewController(vc)
 
         #if FEATURED_TAB_ENABLED
@@ -192,8 +140,6 @@ final class AppCoordinator {
         tabController.addTabViewItem(videosItem)
 
         self.windowController = windowController
-
-//        windowController.window!.toolbar!.displayMode = .labelOnly
 
         restoreApplicationState()
 
@@ -402,8 +348,6 @@ final class AppCoordinator {
         ContributorsFetcher.shared.load()
 
         windowController.contentViewController = tabController
-        
-//        tabController.view.topAnchor.constraint(equalTo: windowController.window!.contentLayoutGuide! as! NSLayoutGuide)
         windowController.showWindow(self)
 
         if storage.isEmpty {

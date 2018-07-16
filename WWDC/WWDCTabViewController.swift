@@ -10,6 +10,18 @@ import Cocoa
 import RxSwift
 import RxCocoa
 
+class WWDCTabBar: NSView {
+
+    private(set) lazy var stackView: NSStackView = {
+        let stackView = NSStackView()
+        stackView.frame = bounds
+        stackView.autoresizingMask = [.width, .height]
+        self.addSubview(stackView)
+
+        return stackView
+    }()
+}
+
 class WWDCTabViewController<Tab: RawRepresentable>: NSTabViewController where Tab.RawValue == Int {
 
     var activeTab: Tab {
@@ -47,6 +59,12 @@ class WWDCTabViewController<Tab: RawRepresentable>: NSTabViewController where Ta
         }
     }
 
+    private(set) lazy var tabBar: WWDCTabBar = {
+        let tabBar = WWDCTabBar()
+
+        return tabBar
+    }()
+
     init(windowController: NSWindowController) {
         super.init(nibName: nil, bundle: nil)
 
@@ -64,15 +82,29 @@ class WWDCTabViewController<Tab: RawRepresentable>: NSTabViewController where Ta
         fatalError("init(coder:) has not been implemented")
     }
 
-    override func viewDidLoad() {
-        super.viewDidLoad()
+    override func addTabViewItem(_ tabViewItem: NSTabViewItem) {
+        super.addTabViewItem(tabViewItem)
 
-        view.wantsLayer = true
+        let itemView = TabItemView(frame: .zero)
+
+        itemView.title = tabViewItem.label
+        itemView.controllerIdentifier = (tabViewItem.viewController?.identifier).map { $0.rawValue } ?? ""
+        itemView.image = NSImage(named: NSImage.Name(rawValue: itemView.controllerIdentifier.lowercased()))
+        itemView.alternateImage = NSImage(named: NSImage.Name(rawValue: itemView.controllerIdentifier.lowercased() + "-filled"))
+        itemView.sizeToFit()
+
+        itemView.target = self
+        itemView.action = #selector(changeTab)
+
+        itemView.state = (tabViewItems.index(of: tabViewItem) == selectedTabViewItemIndex) ? .on : .off
+
+        tabBar.stackView.addView(itemView, in: .center)
     }
 
-//    private func tabItem(with identifier: String) -> NSTabViewItem? {
-//        return tabViewItems.first { $0.identifier as? String == identifier }
-//    }
+    override func removeTabViewItem(_ tabViewItem: NSTabViewItem) {
+        super.removeTabViewItem(tabViewItem)
+        // TODO:
+    }
 
     var isTopConstraintAdded = false
 
@@ -104,115 +136,19 @@ class WWDCTabViewController<Tab: RawRepresentable>: NSTabViewController where Ta
         })
     }
 
-//    override func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
+    @objc
+    private func changeTab(_ sender: TabItemView) {
+        guard let index = indexForChild(with: sender.controllerIdentifier) else { return }
 
-        // Center the tab bar's NSToolbarItem's be putting flexible space at the beginning and end of
-        // the array. Super's implementation returns the NSToolbarItems that represent the NSTabViewItems
-//        var defaultItemIdentifiers = super.toolbarDefaultItemIdentifiers(toolbar)
-//        defaultItemIdentifiers.insert(.flexibleSpace, at: 0)
-//        defaultItemIdentifiers.insert(.wwdcTabLeadingStackView, at: 0)
-//        defaultItemIdentifiers.insert(.flexibleSpace, at: 1)
-//        defaultItemIdentifiers.insert(.flexibleSpace, at: 2)
-//        defaultItemIdentifiers.append(.flexibleSpace)
-//        defaultItemIdentifiers.append(.wwdcTabTrailingStackView)
-//        defaultItemIdentifiers.append(.flexibleSpace)
-
-//        windowController.window?.toolbar?.insertItem(withItemIdentifier: .init("MyThing"), at: 5)
-//        windowController.window?.toolbar?.insertItem(withItemIdentifier: .flexibleSpace, at: 6)
-
-//        return defaultItemIdentifiers
-//    }
-
-//    @objc
-//    func test(sender: NSButton) {
-//        if presentedViewControllers?.isEmpty == true {
-//            self.presentViewController(DownloadsStatusViewController(nibName: nil, bundle: nil), asPopoverRelativeTo: sender.bounds, of: sender, preferredEdge: .maxY, behavior: .semitransient)
-//        } else {
-//            presentedViewControllers?.forEach(dismissViewController)
-//        }
-//    }
-
-//    func makeTabCenteringItem(identifier: NSToolbarItem.Identifier) -> NSToolbarItem {
-//        let item = NSToolbarItem(itemIdentifier: identifier)
-//
-//        let stackView = NSStackView()
-//        stackView.translatesAutoresizingMaskIntoConstraints = true
-//        stackView.autoresizingMask = [.width, .height, .minXMargin, .maxXMargin]
-//        item.view = stackView
-//
-//        item.minSize = .zero
-//        item.maxSize = CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
-//        return item
-//    }
-//
-//    func addTrailingTabItem(view: NSView) {
-//
-//    }
-
-//    override func toolbar(_ toolbar: NSToolbar, itemForItemIdentifier itemIdentifier: NSToolbarItem.Identifier, willBeInsertedIntoToolbar flag: Bool) -> NSToolbarItem? {
-
-//        if [.wwdcTabTrailingStackView, .wwdcTabLeadingStackView].contains(itemIdentifier) {
-//            let simpleItem = NSToolbarItem(itemIdentifier: itemIdentifier)
-//
-//            let b = NSButton(title: itemIdentifier == .wwdcTabLeadingStackView ? "Leading" : "Downloads", target: self, action: #selector(test))
-////            let b2 = NSButton(title: itemIdentifier == .wwdcTabLeadingStackView ? "Leading" : "Downloads", target: self, action: #selector(test))
-//            b.sizeToFit()
-////            b2.sizeToFit()
-//            simpleItem.view = b
-//
-////            stack.addView(b, in: .center)
-////            stack.addView(b2, in: .center)
-//            simpleItem.minSize = b.bounds.size
-//            simpleItem.maxSize = b.bounds.size//CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
-//
-//            return simpleItem
-//        }
-//        if [.wwdcTabTrailingStackView, .wwdcTabLeadingStackView].contains(itemIdentifier) {
-//            let item = makeTabCenteringItem(identifier: itemIdentifier)
-//
-//            if itemIdentifier == .wwdcTabTrailingStackView {
-//                let b = NSButton(title: itemIdentifier == .wwdcTabLeadingStackView ? "Leading" : "Downloads", target: self, action: #selector(test))
-//                b.sizeToFit()
-//
-//                (item.view as! NSStackView).addView(b, in: .center)
-//            }
-//            return item
-//        }
-//        guard let tabItem = tabItem(with: itemIdentifier.rawValue) else { return nil }
-//
-//        let itemView = TabItemView(frame: .zero)
-//
-//        itemView.title = tabItem.label
-//        itemView.controllerIdentifier = (tabItem.viewController?.identifier).map { $0.rawValue } ?? ""
-//        itemView.image = NSImage(named: NSImage.Name(rawValue: itemView.controllerIdentifier.lowercased()))
-//        itemView.alternateImage = NSImage(named: NSImage.Name(rawValue: itemView.controllerIdentifier.lowercased() + "-filled"))
-//
-//        let item = NSToolbarItem(itemIdentifier: itemIdentifier)
-//
-//        item.minSize = itemView.bounds.size
-//        item.maxSize = itemView.bounds.size
-//        item.view = itemView
-//
-//        item.target = self
-//        item.action = #selector(changeTab)
-//
-//        itemView.state = (tabViewItems.index(of: tabItem) == selectedTabViewItemIndex) ? .on : .off
-//
-//        return item
-//    }
-
-//    @objc private func changeTab(_ sender: TabItemView) {
-//        guard let index = indexForChild(with: sender.controllerIdentifier) else { return }
-//
-//        selectedTabViewItemIndex = index
-//    }
+        selectedTabViewItemIndex = index
+    }
 
     private func indexForChild(with identifier: String) -> Int? {
         return tabViewItems.index { $0.viewController?.identifier?.rawValue == identifier }
     }
 
     private var tabItemViews: [TabItemView] {
-        return view.window?.toolbar?.items.compactMap { $0.view as? TabItemView } ?? []
+        return tabBar.stackView.arrangedSubviews.compactMap { $0 as? TabItemView }
     }
 
     private var loadingView: ModalLoadingView?
@@ -225,26 +161,4 @@ class WWDCTabViewController<Tab: RawRepresentable>: NSTabViewController where Ta
         loadingView?.hide()
     }
 
-}
-
-//extension NSToolbarItem.Identifier {
-//    fileprivate static let wwdcTabLeadingStackView = NSToolbarItem.Identifier("MyThingLeading")
-//    fileprivate static let wwdcTabTrailingStackView = NSToolbarItem.Identifier("MyThingTrailing")
-//}
-
-extension NSWindow {
-
-    func toolbarHeight() -> CGFloat {
-        var toolbarHeight = CGFloat(0.0)
-        var windowFrame: NSRect
-
-        if let toolbar = toolbar,
-            toolbar.isVisible {
-
-            windowFrame = NSWindow.contentRect(forFrameRect: self.frame, styleMask: self.styleMask)
-            toolbarHeight = windowFrame.height - (self.contentView?.frame)!.height
-        }
-
-        return toolbarHeight
-    }
 }
