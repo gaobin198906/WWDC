@@ -56,6 +56,7 @@ class WWDCTabViewController<Tab: RawRepresentable>: NSTabViewController where Ta
             view.frame = NSRect(origin: superFrame.origin, size: windowFrame.size)
         }
 
+        tabStyle = .unspecified
         identifier = NSUserInterfaceItemIdentifier(rawValue: "tabs")
     }
 
@@ -66,18 +67,28 @@ class WWDCTabViewController<Tab: RawRepresentable>: NSTabViewController where Ta
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        tabStyle = .toolbar
         view.wantsLayer = true
     }
 
-    private func tabItem(with identifier: String) -> NSTabViewItem? {
-        return tabViewItems.first { $0.identifier as? String == identifier }
-    }
+//    private func tabItem(with identifier: String) -> NSTabViewItem? {
+//        return tabViewItems.first { $0.identifier as? String == identifier }
+//    }
 
-    override func viewDidAppear() {
-        super.viewDidAppear()
+    var isTopConstraintAdded = false
 
+    override func  updateViewConstraints() {
+        super.updateViewConstraints()
 
+        if !isTopConstraintAdded, let window = view.window {
+            isTopConstraintAdded = true
+            NSLayoutConstraint(item: tabView,
+                               attribute: .top,
+                               relatedBy: .equal,
+                               toItem: window.contentLayoutGuide,
+                               attribute: .top,
+                               multiplier: 1,
+                               constant: 0).isActive = true
+        }
     }
 
     override func transition(from fromViewController: NSViewController, to toViewController: NSViewController, options: NSViewController.TransitionOptions = [], completionHandler completion: (() -> Void)? = nil) {
@@ -93,52 +104,52 @@ class WWDCTabViewController<Tab: RawRepresentable>: NSTabViewController where Ta
         })
     }
 
-    override func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
+//    override func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
 
         // Center the tab bar's NSToolbarItem's be putting flexible space at the beginning and end of
         // the array. Super's implementation returns the NSToolbarItems that represent the NSTabViewItems
-        var defaultItemIdentifiers = super.toolbarDefaultItemIdentifiers(toolbar)
+//        var defaultItemIdentifiers = super.toolbarDefaultItemIdentifiers(toolbar)
 //        defaultItemIdentifiers.insert(.flexibleSpace, at: 0)
-        defaultItemIdentifiers.insert(.wwdcTabLeadingStackView, at: 0)
+//        defaultItemIdentifiers.insert(.wwdcTabLeadingStackView, at: 0)
 //        defaultItemIdentifiers.insert(.flexibleSpace, at: 1)
 //        defaultItemIdentifiers.insert(.flexibleSpace, at: 2)
 //        defaultItemIdentifiers.append(.flexibleSpace)
-        defaultItemIdentifiers.append(.wwdcTabTrailingStackView)
+//        defaultItemIdentifiers.append(.wwdcTabTrailingStackView)
 //        defaultItemIdentifiers.append(.flexibleSpace)
 
 //        windowController.window?.toolbar?.insertItem(withItemIdentifier: .init("MyThing"), at: 5)
 //        windowController.window?.toolbar?.insertItem(withItemIdentifier: .flexibleSpace, at: 6)
 
-        return defaultItemIdentifiers
-    }
+//        return defaultItemIdentifiers
+//    }
 
-    @objc
-    func test(sender: NSButton) {
-        if presentedViewControllers?.isEmpty == true {
-            self.presentViewController(DownloadsStatusViewController(nibName: nil, bundle: nil), asPopoverRelativeTo: sender.bounds, of: sender, preferredEdge: .maxY, behavior: .semitransient)
-        } else {
-            presentedViewControllers?.forEach(dismissViewController)
-        }
-    }
+//    @objc
+//    func test(sender: NSButton) {
+//        if presentedViewControllers?.isEmpty == true {
+//            self.presentViewController(DownloadsStatusViewController(nibName: nil, bundle: nil), asPopoverRelativeTo: sender.bounds, of: sender, preferredEdge: .maxY, behavior: .semitransient)
+//        } else {
+//            presentedViewControllers?.forEach(dismissViewController)
+//        }
+//    }
 
-    func makeTabCenteringItem(identifier: NSToolbarItem.Identifier) -> NSToolbarItem {
-        let item = NSToolbarItem(itemIdentifier: identifier)
+//    func makeTabCenteringItem(identifier: NSToolbarItem.Identifier) -> NSToolbarItem {
+//        let item = NSToolbarItem(itemIdentifier: identifier)
+//
+//        let stackView = NSStackView()
+//        stackView.translatesAutoresizingMaskIntoConstraints = true
+//        stackView.autoresizingMask = [.width, .height, .minXMargin, .maxXMargin]
+//        item.view = stackView
+//
+//        item.minSize = .zero
+//        item.maxSize = CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
+//        return item
+//    }
+//
+//    func addTrailingTabItem(view: NSView) {
+//
+//    }
 
-        let stackView = NSStackView()
-        stackView.translatesAutoresizingMaskIntoConstraints = true
-        stackView.autoresizingMask = [.width, .height, .minXMargin, .maxXMargin]
-        item.view = stackView
-
-        item.minSize = .zero
-        item.maxSize = CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
-        return item
-    }
-
-    func addTrailingTabItem(view: NSView) {
-
-    }
-
-    override func toolbar(_ toolbar: NSToolbar, itemForItemIdentifier itemIdentifier: NSToolbarItem.Identifier, willBeInsertedIntoToolbar flag: Bool) -> NSToolbarItem? {
+//    override func toolbar(_ toolbar: NSToolbar, itemForItemIdentifier itemIdentifier: NSToolbarItem.Identifier, willBeInsertedIntoToolbar flag: Bool) -> NSToolbarItem? {
 
 //        if [.wwdcTabTrailingStackView, .wwdcTabLeadingStackView].contains(itemIdentifier) {
 //            let simpleItem = NSToolbarItem(itemIdentifier: itemIdentifier)
@@ -156,45 +167,45 @@ class WWDCTabViewController<Tab: RawRepresentable>: NSTabViewController where Ta
 //
 //            return simpleItem
 //        }
-        if [.wwdcTabTrailingStackView, .wwdcTabLeadingStackView].contains(itemIdentifier) {
-            let item = makeTabCenteringItem(identifier: itemIdentifier)
+//        if [.wwdcTabTrailingStackView, .wwdcTabLeadingStackView].contains(itemIdentifier) {
+//            let item = makeTabCenteringItem(identifier: itemIdentifier)
+//
+//            if itemIdentifier == .wwdcTabTrailingStackView {
+//                let b = NSButton(title: itemIdentifier == .wwdcTabLeadingStackView ? "Leading" : "Downloads", target: self, action: #selector(test))
+//                b.sizeToFit()
+//
+//                (item.view as! NSStackView).addView(b, in: .center)
+//            }
+//            return item
+//        }
+//        guard let tabItem = tabItem(with: itemIdentifier.rawValue) else { return nil }
+//
+//        let itemView = TabItemView(frame: .zero)
+//
+//        itemView.title = tabItem.label
+//        itemView.controllerIdentifier = (tabItem.viewController?.identifier).map { $0.rawValue } ?? ""
+//        itemView.image = NSImage(named: NSImage.Name(rawValue: itemView.controllerIdentifier.lowercased()))
+//        itemView.alternateImage = NSImage(named: NSImage.Name(rawValue: itemView.controllerIdentifier.lowercased() + "-filled"))
+//
+//        let item = NSToolbarItem(itemIdentifier: itemIdentifier)
+//
+//        item.minSize = itemView.bounds.size
+//        item.maxSize = itemView.bounds.size
+//        item.view = itemView
+//
+//        item.target = self
+//        item.action = #selector(changeTab)
+//
+//        itemView.state = (tabViewItems.index(of: tabItem) == selectedTabViewItemIndex) ? .on : .off
+//
+//        return item
+//    }
 
-            if itemIdentifier == .wwdcTabTrailingStackView {
-                let b = NSButton(title: itemIdentifier == .wwdcTabLeadingStackView ? "Leading" : "Downloads", target: self, action: #selector(test))
-                b.sizeToFit()
-                
-                (item.view as! NSStackView).addView(b, in: .center)
-            }
-            return item
-        }
-        guard let tabItem = tabItem(with: itemIdentifier.rawValue) else { return nil }
-
-        let itemView = TabItemView(frame: .zero)
-
-        itemView.title = tabItem.label
-        itemView.controllerIdentifier = (tabItem.viewController?.identifier).map { $0.rawValue } ?? ""
-        itemView.image = NSImage(named: NSImage.Name(rawValue: itemView.controllerIdentifier.lowercased()))
-        itemView.alternateImage = NSImage(named: NSImage.Name(rawValue: itemView.controllerIdentifier.lowercased() + "-filled"))
-
-        let item = NSToolbarItem(itemIdentifier: itemIdentifier)
-
-        item.minSize = itemView.bounds.size
-        item.maxSize = itemView.bounds.size
-        item.view = itemView
-
-        item.target = self
-        item.action = #selector(changeTab)
-
-        itemView.state = (tabViewItems.index(of: tabItem) == selectedTabViewItemIndex) ? .on : .off
-
-        return item
-    }
-
-    @objc private func changeTab(_ sender: TabItemView) {
-        guard let index = indexForChild(with: sender.controllerIdentifier) else { return }
-
-        selectedTabViewItemIndex = index
-    }
+//    @objc private func changeTab(_ sender: TabItemView) {
+//        guard let index = indexForChild(with: sender.controllerIdentifier) else { return }
+//
+//        selectedTabViewItemIndex = index
+//    }
 
     private func indexForChild(with identifier: String) -> Int? {
         return tabViewItems.index { $0.viewController?.identifier?.rawValue == identifier }
@@ -216,10 +227,10 @@ class WWDCTabViewController<Tab: RawRepresentable>: NSTabViewController where Ta
 
 }
 
-extension NSToolbarItem.Identifier {
-    fileprivate static let wwdcTabLeadingStackView = NSToolbarItem.Identifier("MyThingLeading")
-    fileprivate static let wwdcTabTrailingStackView = NSToolbarItem.Identifier("MyThingTrailing")
-}
+//extension NSToolbarItem.Identifier {
+//    fileprivate static let wwdcTabLeadingStackView = NSToolbarItem.Identifier("MyThingLeading")
+//    fileprivate static let wwdcTabTrailingStackView = NSToolbarItem.Identifier("MyThingTrailing")
+//}
 
 extension NSWindow {
 

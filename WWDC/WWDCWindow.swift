@@ -43,7 +43,7 @@ class WWDCWindow: NSWindow {
     fileprivate func applyCustomizations(_ note: Notification? = nil) {
         backgroundColor = .darkWindowBackground
 
-        titleVisibility = .hidden
+//        titleVisibility = .hidden
         isMovableByWindowBackground = true
         tabbingMode = .disallowed
 
