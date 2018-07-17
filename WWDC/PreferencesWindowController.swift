@@ -15,7 +15,7 @@ class PreferencesWindowController: NSWindowController {
     }
 
     init() {
-        let mask: NSWindow.StyleMask = [.titled, .closable]
+        let mask: NSWindow.StyleMask = [.titled, .closable, .fullSizeContentView]
         let window = WWDCWindow(contentRect: PreferencesWindowController.defaultRect, styleMask: mask, backing: .buffered, defer: false)
 
         super.init(window: window)

@@ -16,16 +16,23 @@ import os.log
 
 final class WWDCTitleBarViewController: NSTitlebarAccessoryViewController {
 
+    var centerXConstraint: NSLayoutConstraint!
     override func loadView() {
         let view = NSView(frame: NSRect(x: 0, y: 0, width: 300, height: 100))
 
         tabBar.translatesAutoresizingMaskIntoConstraints = false
 
         view.addSubview(tabBar)
-        tabBar.centerXAnchor.constraint(equalTo: view.centerXAnchor).isActive = true
+        let centerXConstraint = tabBar.centerXAnchor.constraint(equalTo: view.centerXAnchor, constant: -37)
+        centerXConstraint.isActive = true
         tabBar.centerYAnchor.constraint(equalTo: view.centerYAnchor).isActive = true
         tabBar.leadingAnchor.constraint(greaterThanOrEqualTo: view.leadingAnchor).isActive = true
         tabBar.trailingAnchor.constraint(greaterThanOrEqualTo: view.trailingAnchor).isActive = true
+
+        tabBar.postsFrameChangedNotifications = true
+        NotificationCenter.default.addObserver(forName: NSView.frameDidChangeNotification, object: tabBar, queue: .main) { note in
+            centerXConstraint.constant = -view.superview!.frame.minX/2
+        }
 
         self.view = view
     }
@@ -36,6 +43,12 @@ final class WWDCTitleBarViewController: NSTitlebarAccessoryViewController {
         self.tabBar = tabBar
 
         super.init(nibName: nil, bundle: nil)
+    }
+
+    override func viewWillAppear() {
+        super.viewWillAppear()
+
+
     }
 
     required init?(coder: NSCoder) {
