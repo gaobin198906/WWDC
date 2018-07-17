@@ -12,7 +12,8 @@
 		3A0840B41F924665002BC828 /* Realm+InMemory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A0840B31F924665002BC828 /* Realm+InMemory.swift */; };
 		3A6227031F9272A300D5F687 /* contents.json in Resources */ = {isa = PBXBuildFile; fileRef = 3A6227021F9272A300D5F687 /* contents.json */; };
 		4D5EB0F820598E6000D4BC52 /* SessionRowProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D5EB0F720598E6000D4BC52 /* SessionRowProvider.swift */; };
-		4DA9C4D120EC098800710354 /* DownloadsStatusViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DA9C4D020EC098800710354 /* DownloadsStatusViewController.swift */; };
+		4DA9C4D120EC098800710354 /* DownloadsManagementViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DA9C4D020EC098800710354 /* DownloadsManagementViewController.swift */; };
+		4DBA2F7620FE71BF00ED0253 /* DownloadsStatusButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DBA2F7520FE71BF00ED0253 /* DownloadsStatusButton.swift */; };
 		4DBFA4DA20E160CB00BDF34B /* AVAsset+AsyncHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DBFA4D920E160CB00BDF34B /* AVAsset+AsyncHelpers.swift */; };
 		4DEEC3A32051C8D400376595 /* TestUtilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DEEC3A22051C8D400376595 /* TestUtilities.swift */; };
 		4DF6641620C8A85000FD1684 /* SessionsTableViewController+SupportingTypesAndExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DF6641520C8A85000FD1684 /* SessionsTableViewController+SupportingTypesAndExtensions.swift */; };
@@ -355,7 +356,8 @@
 		3A0840B31F924665002BC828 /* Realm+InMemory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Realm+InMemory.swift"; sourceTree = "<group>"; };
 		3A6227021F9272A300D5F687 /* contents.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = contents.json; sourceTree = "<group>"; };
 		4D5EB0F720598E6000D4BC52 /* SessionRowProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionRowProvider.swift; sourceTree = "<group>"; };
-		4DA9C4D020EC098800710354 /* DownloadsStatusViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadsStatusViewController.swift; sourceTree = "<group>"; };
+		4DA9C4D020EC098800710354 /* DownloadsManagementViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadsManagementViewController.swift; sourceTree = "<group>"; };
+		4DBA2F7520FE71BF00ED0253 /* DownloadsStatusButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadsStatusButton.swift; sourceTree = "<group>"; };
 		4DBFA4D920E160CB00BDF34B /* AVAsset+AsyncHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AVAsset+AsyncHelpers.swift"; sourceTree = "<group>"; };
 		4DEEC3A22051C8D400376595 /* TestUtilities.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestUtilities.swift; sourceTree = "<group>"; };
 		4DF6641520C8A85000FD1684 /* SessionsTableViewController+SupportingTypesAndExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SessionsTableViewController+SupportingTypesAndExtensions.swift"; sourceTree = "<group>"; };
@@ -713,7 +715,8 @@
 		4DA9C4CF20EC096800710354 /* Downloads */ = {
 			isa = PBXGroup;
 			children = (
-				4DA9C4D020EC098800710354 /* DownloadsStatusViewController.swift */,
+				4DA9C4D020EC098800710354 /* DownloadsManagementViewController.swift */,
+				4DBA2F7520FE71BF00ED0253 /* DownloadsStatusButton.swift */,
 			);
 			name = Downloads;
 			sourceTree = "<group>";
@@ -1946,6 +1949,7 @@
 				DDA60E1320A90655002EECF5 /* SessionCellView.swift in Sources */,
 				DDF32EAD1EBE2F9F0028E39D /* SessionRow.swift in Sources */,
 				DDDF807820BA3DAA007284F8 /* FeaturedSectionViewController.swift in Sources */,
+				4DBA2F7620FE71BF00ED0253 /* DownloadsStatusButton.swift in Sources */,
 				DD6E06F81EDBC62D000EAEA4 /* TranscriptTableViewController.swift in Sources */,
 				DD36A4B01E478C6A00B2EA88 /* AppDelegate.swift in Sources */,
 				DD6E06FC1EDBCA7E000EAEA4 /* TranscriptTableCellView.swift in Sources */,
@@ -1954,7 +1958,7 @@
 				DDB3529C1EC8AB5D00254815 /* WWDCLayer.swift in Sources */,
 				DD7F38651EABD6DF002D8C00 /* SessionDetailsViewController.swift in Sources */,
 				DD34A79B1EC3CD5900E0B575 /* Constants.swift in Sources */,
-				4DA9C4D120EC098800710354 /* DownloadsStatusViewController.swift in Sources */,
+				4DA9C4D120EC098800710354 /* DownloadsManagementViewController.swift in Sources */,
 				DD90CDCD1ED7A5ED00CADE86 /* SearchCoordinator.swift in Sources */,
 				DD71CC2A20BD009500BB5F47 /* AppCoordinator+Featured.swift in Sources */,
 				DD9301C01EE3212D00BE724B /* ChromeCastPlaybackProvider.swift in Sources */,

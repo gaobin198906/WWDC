@@ -16,23 +16,44 @@ import os.log
 
 final class WWDCTitleBarViewController: NSTitlebarAccessoryViewController {
 
-    var centerXConstraint: NSLayoutConstraint!
+    var centerOffset: CGFloat = 0 {
+        didSet {
+            horizontalPositioningConstraints.forEach { $0.constant = centerOffset }
+        }
+    }
+    var horizontalPositioningConstraints = [NSLayoutConstraint]()
+
     override func loadView() {
-        let view = NSView(frame: NSRect(x: 0, y: 0, width: 300, height: 100))
+        let view = NSView()
 
         tabBar.translatesAutoresizingMaskIntoConstraints = false
 
         view.addSubview(tabBar)
-        let centerXConstraint = tabBar.centerXAnchor.constraint(equalTo: view.centerXAnchor, constant: -37)
+        let centerXConstraint = tabBar.centerXAnchor.constraint(equalTo: view.centerXAnchor)
         centerXConstraint.isActive = true
+        horizontalPositioningConstraints.append(centerXConstraint)
         tabBar.centerYAnchor.constraint(equalTo: view.centerYAnchor).isActive = true
         tabBar.leadingAnchor.constraint(greaterThanOrEqualTo: view.leadingAnchor).isActive = true
-        tabBar.trailingAnchor.constraint(greaterThanOrEqualTo: view.trailingAnchor).isActive = true
+        tabBar.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor).isActive = true
 
-        tabBar.postsFrameChangedNotifications = true
-        NotificationCenter.default.addObserver(forName: NSView.frameDidChangeNotification, object: tabBar, queue: .main) { note in
-            centerXConstraint.constant = -view.superview!.frame.minX/2
-        }
+        let dummyView = NSView(frame: .init(x: 0, y: 0, width: 50, height: 0))
+        dummyView.translatesAutoresizingMaskIntoConstraints = false
+        dummyView.wantsLayer = true
+        dummyView.layer?.backgroundColor = NSColor.red.cgColor
+        view.addSubview(dummyView)
+
+        let oneThirdConstraint = NSLayoutConstraint(item: dummyView,
+                           attribute: .centerX,
+                           relatedBy: .equal,
+                           toItem: view,
+                           attribute: .trailing,
+                           multiplier: 3/4,
+                           constant: 0)
+
+        oneThirdConstraint.isActive = true
+        dummyView.centerYAnchor.constraint(equalTo: view.centerYAnchor).isActive = true
+        dummyView.widthAnchor.constraint(equalToConstant: 50).isActive = true
+        dummyView.heightAnchor.constraint(equalTo: view.heightAnchor).isActive = true
 
         self.view = view
     }
@@ -43,16 +64,24 @@ final class WWDCTitleBarViewController: NSTitlebarAccessoryViewController {
         self.tabBar = tabBar
 
         super.init(nibName: nil, bundle: nil)
-    }
 
-    override func viewWillAppear() {
-        super.viewWillAppear()
-
-
+        layoutAttribute = .top
     }
 
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+
+    override func viewWillLayout() {
+        super.viewWillLayout()
+
+        guard let window = view.window else { return }
+
+        // Convert horizontal window midX into our view's cooridinate space to
+        // allow for window-based centering
+        let windowBounds = window.convertFromScreen(window.frame)
+        let localWindowBounds = view.convert(windowBounds, from: nil)
+        centerOffset = localWindowBounds.midX - view.bounds.midX
     }
 }
 
@@ -120,7 +149,6 @@ final class AppCoordinator {
         tabController = WWDCTabViewController(windowController: windowController)
 
         let vc = WWDCTitleBarViewController(tabBar: tabController.tabBar)
-        vc.layoutAttribute = .top
         windowController.window!.addTitlebarAccessoryViewController(vc)
 
         #if FEATURED_TAB_ENABLED

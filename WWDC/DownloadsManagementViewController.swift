@@ -1,5 +1,5 @@
 //
-//  DownloadsStatusViewController.swift
+//  DownloadsManagementViewController.swift
 //  WWDC
 //
 //  Created by Allen Humphreys on 7/3/18.
@@ -15,7 +15,7 @@ class WWDCVibrantTextField: NSTextField {
     }
 }
 
-class DownloadsStatusViewController: NSViewController {
+class DownloadsManagementViewController: NSViewController {
 
     private lazy var summaryLabel: WWDCVibrantTextField = {
         let l = WWDCVibrantTextField(labelWithString: "Downloads")
@@ -41,7 +41,7 @@ class DownloadsStatusViewController: NSViewController {
     }
 }
 
-extension DownloadsStatusViewController: NSPopoverDelegate {
+extension DownloadsManagementViewController: NSPopoverDelegate {
 
     func popoverShouldDetach(_ popover: NSPopover) -> Bool {
         return true
