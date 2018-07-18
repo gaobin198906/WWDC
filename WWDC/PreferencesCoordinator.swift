@@ -41,10 +41,6 @@ final class PreferencesCoordinator {
         windowController = PreferencesWindowController()
         tabController = WWDCTabViewController(windowController: windowController)
 
-        let vc = WWDCTitleBarViewController(tabBar: tabController.tabBar)
-        vc.layoutAttribute = .top
-        windowController.window!.addTitlebarAccessoryViewController(vc)
-
         // General
         generalController = GeneralPreferencesViewController.loadFromStoryboard()
         generalController.identifier = NSUserInterfaceItemIdentifier(rawValue: "General")

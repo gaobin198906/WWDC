@@ -26,15 +26,15 @@ final class WWDCTitleBarViewController: NSTitlebarAccessoryViewController {
     override func loadView() {
         let view = NSView()
 
-        tabBar.translatesAutoresizingMaskIntoConstraints = false
+        tabBarContainer.translatesAutoresizingMaskIntoConstraints = false
 
-        view.addSubview(tabBar)
-        let centerXConstraint = tabBar.centerXAnchor.constraint(equalTo: view.centerXAnchor)
+        view.addSubview(tabBarContainer)
+        let centerXConstraint = tabBarContainer.centerXAnchor.constraint(equalTo: view.centerXAnchor)
         centerXConstraint.isActive = true
         horizontalPositioningConstraints.append(centerXConstraint)
-        tabBar.centerYAnchor.constraint(equalTo: view.centerYAnchor).isActive = true
-        tabBar.leadingAnchor.constraint(greaterThanOrEqualTo: view.leadingAnchor).isActive = true
-        tabBar.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor).isActive = true
+        tabBarContainer.centerYAnchor.constraint(equalTo: view.centerYAnchor).isActive = true
+        tabBarContainer.leadingAnchor.constraint(greaterThanOrEqualTo: view.leadingAnchor).isActive = true
+        tabBarContainer.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor).isActive = true
 
         let dummyView = NSView(frame: .init(x: 0, y: 0, width: 50, height: 0))
         dummyView.translatesAutoresizingMaskIntoConstraints = false
@@ -58,11 +58,21 @@ final class WWDCTitleBarViewController: NSTitlebarAccessoryViewController {
         self.view = view
     }
 
-    let tabBar: WWDCTabBar
+    lazy var tabBarContainer: NSView = {
+        let v = NSView()
+        return v
+    }()
+    var tabBar: WWDCTabBar? {
+        didSet {
+            oldValue?.removeFromSuperview()
+            guard let tabBar = tabBar else { return }
+            tabBar.frame = tabBarContainer.bounds
+            tabBar.autoresizingMask = [.width, .height]
+            tabBarContainer.addSubview(tabBar)
+        }
+    }
 
-    init(tabBar: WWDCTabBar) {
-        self.tabBar = tabBar
-
+    init() {
         super.init(nibName: nil, bundle: nil)
 
         layoutAttribute = .top
@@ -147,9 +157,6 @@ final class AppCoordinator {
         // Primary UI Intialization
 
         tabController = WWDCTabViewController(windowController: windowController)
-
-        let vc = WWDCTitleBarViewController(tabBar: tabController.tabBar)
-        windowController.window!.addTitlebarAccessoryViewController(vc)
 
         #if FEATURED_TAB_ENABLED
         // Featured

@@ -65,8 +65,10 @@ class WWDCTabViewController<Tab: RawRepresentable>: NSTabViewController where Ta
         return tabBar
     }()
 
-    init(windowController: NSWindowController) {
+    init(windowController: WWDCWindowController) {
         super.init(nibName: nil, bundle: nil)
+
+        windowController.titleBarViewController.tabBar = tabBar
 
         // Preserve the window's size, essentially passing in saved window frame sizes
         let superFrame = view.frame
