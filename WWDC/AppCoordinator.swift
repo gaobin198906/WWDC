@@ -36,10 +36,9 @@ final class WWDCTitleBarViewController: NSTitlebarAccessoryViewController {
         tabBarContainer.leadingAnchor.constraint(greaterThanOrEqualTo: view.leadingAnchor).isActive = true
         tabBarContainer.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor).isActive = true
 
-        let dummyView = NSView(frame: .init(x: 0, y: 0, width: 50, height: 0))
+        let dummyView = DownloadsStatusButton(target: self, action: #selector(test))
+        dummyView.sizeToFit()
         dummyView.translatesAutoresizingMaskIntoConstraints = false
-        dummyView.wantsLayer = true
-        dummyView.layer?.backgroundColor = NSColor.red.cgColor
         view.addSubview(dummyView)
 
         let oneThirdConstraint = NSLayoutConstraint(item: dummyView,
@@ -52,16 +51,26 @@ final class WWDCTitleBarViewController: NSTitlebarAccessoryViewController {
 
         oneThirdConstraint.isActive = true
         dummyView.centerYAnchor.constraint(equalTo: view.centerYAnchor).isActive = true
-        dummyView.widthAnchor.constraint(equalToConstant: 50).isActive = true
-        dummyView.heightAnchor.constraint(equalTo: view.heightAnchor).isActive = true
+        dummyView.heightAnchor.constraint(equalTo: view.heightAnchor, multiplier: 2/3).isActive = true
+        dummyView.widthAnchor.constraint(equalToConstant: 40).isActive = true
 
         self.view = view
+    }
+
+    @objc
+    func test(sender: NSButton) {
+        if presentedViewControllers?.isEmpty == true {
+            presentViewController(DownloadsManagementViewController(nibName: nil, bundle: nil), asPopoverRelativeTo: sender.bounds, of: sender, preferredEdge: .maxY, behavior: .semitransient)
+        } else {
+            presentedViewControllers?.forEach(dismissViewController)
+        }
     }
 
     lazy var tabBarContainer: NSView = {
         let v = NSView()
         return v
     }()
+
     var tabBar: WWDCTabBar? {
         didSet {
             oldValue?.removeFromSuperview()

@@ -10,8 +10,15 @@ import Foundation
 
 class DownloadsStatusButton: NSButton {
 
-    override init(frame: NSRect) {
-        super.init(frame: frame)
+    init(target: AnyObject?, action: Selector?) {
+        super.init(frame: .zero)
+        setButtonType(.momentaryLight)
+
+        bezelStyle = .rounded
+        imageScaling = .scaleProportionallyDown
+        image = #imageLiteral(resourceName: "downloads").resized(to: 17)
+        self.target = target
+        self.action = action
     }
 
     required init?(coder: NSCoder) {
