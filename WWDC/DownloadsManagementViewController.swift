@@ -2,31 +2,19 @@
 //  DownloadsManagementViewController.swift
 //  WWDC
 //
-//  Created by Allen Humphreys on 7/3/18.
+//  Created by Allen Humphreys on 3/7/18.
 //  Copyright © 2018 Guilherme Rambo. All rights reserved.
 //
 
 import Foundation
 
-class WWDCVibrantTextField: NSTextField {
-
-    override var allowsVibrancy: Bool {
-        return true
-    }
-}
-
 class DownloadsManagementViewController: NSViewController {
 
-    private lazy var summaryLabel: WWDCVibrantTextField = {
-        let l = WWDCVibrantTextField(labelWithString: "Downloads")
+    private lazy var summaryLabel: VibrantTextField = {
+        let l = VibrantTextField(labelWithString: "Downloads")
         l.font = .systemFont(ofSize: 50)
         l.textColor = .secondaryLabelColor
-//        l.cell?.backgroundStyle = .dark
-//        l.isSelectable = true
-//        l.lineBreakMode = .byWordWrapping
-//        l.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-//        l.allowsDefaultTighteningForTruncation = true
-//        l.maximumNumberOfLines = 20
+        l.isSelectable = true
         l.translatesAutoresizingMaskIntoConstraints = false
 
         return l
@@ -44,6 +32,7 @@ class DownloadsManagementViewController: NSViewController {
 extension DownloadsManagementViewController: NSPopoverDelegate {
 
     func popoverShouldDetach(_ popover: NSPopover) -> Bool {
+
         return true
     }
 }

@@ -2,7 +2,7 @@
 //  DownloadsStatusButton.swift
 //  WWDC
 //
-//  Created by Allen Humphreys on 7/17/18.
+//  Created by Allen Humphreys on 17/7/18.
 //  Copyright © 2018 Guilherme Rambo. All rights reserved.
 //
 

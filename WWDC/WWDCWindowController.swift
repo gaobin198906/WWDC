@@ -2,7 +2,7 @@
 //  WWDCWindowController.swift
 //  WWDC
 //
-//  Created by Allen Humphreys on 7/18/18.
+//  Created by Allen Humphreys on 18/7/18.
 //  Copyright © 2018 Guilherme Rambo. All rights reserved.
 //
 
@@ -10,7 +10,7 @@ import Foundation
 
 class WWDCWindowController: NSWindowController {
 
-    var titleBarViewController = WWDCTitleBarViewController()
+    var titleBarViewController = TitleBarViewController()
 
     override var windowNibName: NSNib.Name? {
         // Triggers `loadWindow` to be called so we can override it
@@ -26,7 +26,7 @@ class WWDCWindowController: NSWindowController {
     }
 
     override func loadWindow() {
-        fatalError("loadWindow must be override by subclasses")
+        fatalError("loadWindow must be overriden by subclasses")
     }
 
     override func windowDidLoad() {

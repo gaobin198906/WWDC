@@ -14,96 +14,6 @@ import PlayerUI
 import ThrowBack
 import os.log
 
-final class WWDCTitleBarViewController: NSTitlebarAccessoryViewController {
-
-    var centerOffset: CGFloat = 0 {
-        didSet {
-            horizontalPositioningConstraints.forEach { $0.constant = centerOffset }
-        }
-    }
-    var horizontalPositioningConstraints = [NSLayoutConstraint]()
-
-    override func loadView() {
-        let view = NSView()
-
-        tabBarContainer.translatesAutoresizingMaskIntoConstraints = false
-
-        view.addSubview(tabBarContainer)
-        let centerXConstraint = tabBarContainer.centerXAnchor.constraint(equalTo: view.centerXAnchor)
-        centerXConstraint.isActive = true
-        horizontalPositioningConstraints.append(centerXConstraint)
-        tabBarContainer.centerYAnchor.constraint(equalTo: view.centerYAnchor).isActive = true
-        tabBarContainer.leadingAnchor.constraint(greaterThanOrEqualTo: view.leadingAnchor).isActive = true
-        tabBarContainer.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor).isActive = true
-
-        let dummyView = DownloadsStatusButton(target: self, action: #selector(test))
-        dummyView.sizeToFit()
-        dummyView.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(dummyView)
-
-        let oneThirdConstraint = NSLayoutConstraint(item: dummyView,
-                           attribute: .centerX,
-                           relatedBy: .equal,
-                           toItem: view,
-                           attribute: .trailing,
-                           multiplier: 3/4,
-                           constant: 0)
-
-        oneThirdConstraint.isActive = true
-        dummyView.centerYAnchor.constraint(equalTo: view.centerYAnchor).isActive = true
-        dummyView.heightAnchor.constraint(equalTo: view.heightAnchor, multiplier: 2/3).isActive = true
-        dummyView.widthAnchor.constraint(equalToConstant: 40).isActive = true
-
-        self.view = view
-    }
-
-    @objc
-    func test(sender: NSButton) {
-        if presentedViewControllers?.isEmpty == true {
-            presentViewController(DownloadsManagementViewController(nibName: nil, bundle: nil), asPopoverRelativeTo: sender.bounds, of: sender, preferredEdge: .maxY, behavior: .semitransient)
-        } else {
-            presentedViewControllers?.forEach(dismissViewController)
-        }
-    }
-
-    lazy var tabBarContainer: NSView = {
-        let v = NSView()
-        return v
-    }()
-
-    var tabBar: WWDCTabBar? {
-        didSet {
-            oldValue?.removeFromSuperview()
-            guard let tabBar = tabBar else { return }
-            tabBar.frame = tabBarContainer.bounds
-            tabBar.autoresizingMask = [.width, .height]
-            tabBarContainer.addSubview(tabBar)
-        }
-    }
-
-    init() {
-        super.init(nibName: nil, bundle: nil)
-
-        layoutAttribute = .top
-    }
-
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-
-    override func viewWillLayout() {
-        super.viewWillLayout()
-
-        guard let window = view.window else { return }
-
-        // Convert horizontal window midX into our view's cooridinate space to
-        // allow for window-based centering
-        let windowBounds = window.convertFromScreen(window.frame)
-        let localWindowBounds = view.convert(windowBounds, from: nil)
-        centerOffset = localWindowBounds.midX - view.bounds.midX
-    }
-}
-
 final class AppCoordinator {
 
     let log = OSLog(subsystem: "WWDC", category: "AppCoordinator")
@@ -160,6 +70,8 @@ final class AppCoordinator {
         }
 
         DownloadManager.shared.start(with: storage)
+
+        windowController.titleBarViewController.statusViewController = DownloadsStatusViewController(downloadManager: DownloadManager.shared)
 
         liveObserver = LiveObserver(dateProvider: today, storage: storage, syncEngine: syncEngine)
 
