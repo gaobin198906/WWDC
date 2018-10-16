@@ -249,7 +249,6 @@ final class DownloadManager: NSObject {
 
         return Observable<DownloadStatus>.create { observer -> Disposable in
             let nc = NotificationCenter.default
-            let q = OperationQueue.main
 
             let checkDownloadedState = {
                 if self.isDownloading(asset.remoteURL) {
@@ -263,57 +262,48 @@ final class DownloadManager: NSObject {
 
             checkDownloadedState()
 
-            let fileDeleted = nc.addObserver(forName: .DownloadManagerFileDeletedNotification, object: nil, queue: q) { note in
-                guard asset.relativeLocalURL == note.object as? String else { return }
+            let fileDeleted = nc.dm_addObserver(forName: .DownloadManagerFileDeletedNotification, filteredBy: asset.relativeLocalURL) { _ in
 
                 observer.onNext(.none)
             }
 
-            let fileAdded = nc.addObserver(forName: .DownloadManagerFileAddedNotification, object: nil, queue: q) { note in
-                guard asset.relativeLocalURL == note.object as? String else { return }
+            let fileAdded = nc.dm_addObserver(forName: .DownloadManagerFileAddedNotification, filteredBy: asset.relativeLocalURL) { _ in
 
                 observer.onNext(.finished)
             }
 
-            let started = nc.addObserver(forName: .DownloadManagerDownloadStarted, object: nil, queue: q) { note in
-                guard asset.remoteURL == note.object as? String else { return }
+            let started = nc.dm_addObserver(forName: .DownloadManagerDownloadStarted, filteredBy: asset.remoteURL) { _ in
 
                 observer.onNext(.downloading(-1))
             }
 
-            let cancelled = nc.addObserver(forName: .DownloadManagerDownloadCancelled, object: nil, queue: q) { note in
-                guard asset.remoteURL == note.object as? String else { return }
+            let cancelled = nc.dm_addObserver(forName: .DownloadManagerDownloadCancelled, filteredBy: asset.remoteURL) { _ in
 
                 observer.onNext(.cancelled)
             }
 
-            let paused = nc.addObserver(forName: .DownloadManagerDownloadPaused, object: nil, queue: q) { note in
-                guard asset.remoteURL == note.object as? String else { return }
+            let paused = nc.dm_addObserver(forName: .DownloadManagerDownloadPaused, filteredBy: asset.remoteURL) { _ in
 
                 observer.onNext(.paused)
             }
 
-            let resumed = nc.addObserver(forName: .DownloadManagerDownloadResumed, object: nil, queue: q) { note in
-                guard asset.remoteURL == note.object as? String else { return }
+            let resumed = nc.dm_addObserver(forName: .DownloadManagerDownloadResumed, filteredBy: asset.remoteURL) { _ in
 
                 observer.onNext(.downloading(-1))
             }
 
-            let failed = nc.addObserver(forName: .DownloadManagerDownloadFailed, object: nil, queue: q) { note in
-                guard asset.remoteURL == note.object as? String else { return }
+            let failed = nc.dm_addObserver(forName: .DownloadManagerDownloadFailed, filteredBy: asset.remoteURL) { note in
 
                 let error = note.userInfo?["error"] as? Error
                 observer.onNext(.failed(error))
             }
 
-            let finished = nc.addObserver(forName: .DownloadManagerDownloadFinished, object: nil, queue: q) { note in
-                guard asset.remoteURL == note.object as? String else { return }
+            let finished = nc.dm_addObserver(forName: .DownloadManagerDownloadFinished, filteredBy: asset.remoteURL) { _ in
 
                 observer.onNext(.finished)
             }
 
-            let progress = nc.addObserver(forName: .DownloadManagerDownloadProgressChanged, object: nil, queue: q) { note in
-                guard asset.remoteURL == note.object as? String else { return }
+            let progress = nc.dm_addObserver(forName: .DownloadManagerDownloadProgressChanged, filteredBy: asset.remoteURL) { note in
 
                 if let info = note.userInfo?["info"] as? DownloadInfo {
                     observer.onNext(.downloading(info.progress))
@@ -323,15 +313,8 @@ final class DownloadManager: NSObject {
             }
 
             return Disposables.create {
-                nc.removeObserver(fileDeleted)
-                nc.removeObserver(fileAdded)
-                nc.removeObserver(started)
-                nc.removeObserver(cancelled)
-                nc.removeObserver(paused)
-                nc.removeObserver(resumed)
-                nc.removeObserver(failed)
-                nc.removeObserver(finished)
-                nc.removeObserver(progress)
+                [fileDeleted, fileAdded, started, cancelled,
+                 paused, resumed, failed, finished, progress].forEach(nc.removeObserver)
             }
         }
     }
@@ -487,4 +470,15 @@ extension DownloadManager: URLSessionDownloadDelegate, URLSessionTaskDelegate {
         NotificationCenter.default.post(name: .DownloadManagerDownloadProgressChanged, object: originalURL, userInfo: ["info": info])
     }
 
+}
+
+extension NotificationCenter {
+
+    fileprivate func dm_addObserver<T: Equatable>(forName name: NSNotification.Name, filteredBy object: T, using block: @escaping (Notification) -> Void) -> NSObjectProtocol {
+        return self.addObserver(forName: name, object: nil, queue: .main, using: { note in
+            guard object == note.object as? T else { return }
+
+            block(note)
+        })
+    }
 }
