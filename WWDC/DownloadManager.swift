@@ -55,7 +55,15 @@ final class DownloadManager: NSObject {
     private let log = OSLog(subsystem: "WWDC", category: "DownloadManager")
     private let configuration = URLSessionConfiguration.background(withIdentifier: "WWDC Video Downloader")
     private var backgroundSession: Foundation.URLSession!
-    private var downloadTasks: [String: URLSessionDownloadTask] = [:]
+    private var downloadTasks: [String: URLSessionDownloadTask] = [:] {
+        didSet {
+            downloadTasksSubject.onNext(downloadTasks)
+        }
+    }
+    private let downloadTasksSubject = BehaviorSubject<[String: URLSessionDownloadTask]>(value: [:])
+    var downloadsObservable: Observable<[String: URLSessionDownloadTask]> {
+        return downloadTasksSubject.asObservable()
+    }
     private let defaults = UserDefaults.standard
 
     private var storage: Storage!
@@ -475,10 +483,10 @@ extension DownloadManager: URLSessionDownloadDelegate, URLSessionTaskDelegate {
 extension NotificationCenter {
 
     fileprivate func dm_addObserver<T: Equatable>(forName name: NSNotification.Name, filteredBy object: T, using block: @escaping (Notification) -> Void) -> NSObjectProtocol {
-        return self.addObserver(forName: name, object: nil, queue: .main, using: { note in
+        return self.addObserver(forName: name, object: nil, queue: .main) { note in
             guard object == note.object as? T else { return }
 
             block(note)
-        })
+        }
     }
 }

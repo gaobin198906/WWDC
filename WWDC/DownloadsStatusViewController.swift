@@ -16,6 +16,15 @@ class DownloadsStatusViewController: NSViewController {
         self.downloadManager = downloadManager
 
         super.init(nibName: nil, bundle: nil)
+
+        downloadManager.downloadsObservable.subscribe(onNext: {
+            self.statusButton.isHidden = $0.isEmpty
+            for task in $0.values {
+                task.rx.observeWeakly(Int64.self, "countOfBytesReceived").subscribe(onNext: {
+                    print($0)
+                })
+            }
+        })
     }
 
     required init?(coder: NSCoder) {
@@ -25,7 +34,6 @@ class DownloadsStatusViewController: NSViewController {
     lazy var statusButton: DownloadsStatusButton = {
         let v = DownloadsStatusButton(target: self, action: #selector(test))
         v.translatesAutoresizingMaskIntoConstraints = false
-        v.sizeToFit()
 
         return v
     }()
@@ -36,7 +44,8 @@ class DownloadsStatusViewController: NSViewController {
         #if DEBUG
         view.addSubview(statusButton)
         statusButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -40).isActive = true
-        statusButton.heightAnchor.constraint(equalTo: view.heightAnchor, multiplier: 0.65, constant: 0).isActive = true
+        statusButton.heightAnchor.constraint(equalTo: view.heightAnchor, multiplier: 1, constant: 0).isActive = true
+        statusButton.widthAnchor.constraint(equalTo: view.heightAnchor, multiplier: 1, constant: 0).isActive = true
         statusButton.centerYAnchor.constraint(equalTo: view.centerYAnchor).isActive = true
         #endif
 
@@ -46,7 +55,7 @@ class DownloadsStatusViewController: NSViewController {
     @objc
     func test(sender: NSButton) {
         if presentedViewControllers?.isEmpty == true {
-            present(DownloadsManagementViewController(nibName: nil, bundle: nil), asPopoverRelativeTo: sender.bounds, of: sender, preferredEdge: .maxY, behavior: .semitransient)
+            present(DownloadsManagementViewController(downloadManager: downloadManager), asPopoverRelativeTo: sender.bounds, of: sender, preferredEdge: .maxY, behavior: .semitransient)
         } else {
             presentedViewControllers?.forEach(dismiss)
         }
