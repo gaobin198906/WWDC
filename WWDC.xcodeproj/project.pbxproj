@@ -20,6 +20,7 @@
 		4DA9C4D120EC098800710354 /* DownloadsManagementViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DA9C4D020EC098800710354 /* DownloadsManagementViewController.swift */; };
 		4DBA2F7620FE71BF00ED0253 /* DownloadsStatusButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DBA2F7520FE71BF00ED0253 /* DownloadsStatusButton.swift */; };
 		4DBFA4DA20E160CB00BDF34B /* AVAsset+AsyncHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DBFA4D920E160CB00BDF34B /* AVAsset+AsyncHelpers.swift */; };
+		4DDF6A782177A00C008E5539 /* DownloadsManagementTableCellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DDF6A772177A00C008E5539 /* DownloadsManagementTableCellView.swift */; };
 		4DEEC3A32051C8D400376595 /* TestUtilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DEEC3A22051C8D400376595 /* TestUtilities.swift */; };
 		4DF6641620C8A85000FD1684 /* SessionsTableViewController+SupportingTypesAndExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DF6641520C8A85000FD1684 /* SessionsTableViewController+SupportingTypesAndExtensions.swift */; };
 		DD0159A71ECFE26200F980F1 /* DeepLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD0159A61ECFE26200F980F1 /* DeepLink.swift */; };
@@ -369,6 +370,7 @@
 		4DA9C4D020EC098800710354 /* DownloadsManagementViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadsManagementViewController.swift; sourceTree = "<group>"; };
 		4DBA2F7520FE71BF00ED0253 /* DownloadsStatusButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadsStatusButton.swift; sourceTree = "<group>"; };
 		4DBFA4D920E160CB00BDF34B /* AVAsset+AsyncHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AVAsset+AsyncHelpers.swift"; sourceTree = "<group>"; };
+		4DDF6A772177A00C008E5539 /* DownloadsManagementTableCellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadsManagementTableCellView.swift; sourceTree = "<group>"; };
 		4DEEC3A22051C8D400376595 /* TestUtilities.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestUtilities.swift; sourceTree = "<group>"; };
 		4DF6641520C8A85000FD1684 /* SessionsTableViewController+SupportingTypesAndExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SessionsTableViewController+SupportingTypesAndExtensions.swift"; sourceTree = "<group>"; };
 		DD0159A61ECFE26200F980F1 /* DeepLink.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DeepLink.swift; sourceTree = "<group>"; };
@@ -726,6 +728,7 @@
 			isa = PBXGroup;
 			children = (
 				4DA9C4D020EC098800710354 /* DownloadsManagementViewController.swift */,
+				4DDF6A772177A00C008E5539 /* DownloadsManagementTableCellView.swift */,
 				4DBA2F7520FE71BF00ED0253 /* DownloadsStatusButton.swift */,
 				4D7482CB20FFAA09008D156C /* DownloadsStatusViewController.swift */,
 			);
@@ -1985,6 +1988,7 @@
 				4D7482CC20FFAA09008D156C /* DownloadsStatusViewController.swift in Sources */,
 				DDDF807C20BA470B007284F8 /* FeaturedSectionViewModel.swift in Sources */,
 				DDEA85FC1EB52AB5002AE0EB /* VideoPlayerWindowController.swift in Sources */,
+				4DDF6A782177A00C008E5539 /* DownloadsManagementTableCellView.swift in Sources */,
 				DDF32EBF1EBE68EE0028E39D /* NSTableView+Rx.swift in Sources */,
 				DDDF807E20BA4FFA007284F8 /* WWDCHorizontalScrollView.swift in Sources */,
 				DD7F387D1EAC113A002D8C00 /* WWDCTextField.swift in Sources */,

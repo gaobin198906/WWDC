@@ -7,24 +7,28 @@
 //
 
 import Foundation
+import RxSwift
 
 class DownloadsStatusViewController: NSViewController {
 
     let downloadManager: DownloadManager
+    let disposeBag = DisposeBag()
 
     init(downloadManager: DownloadManager) {
         self.downloadManager = downloadManager
 
         super.init(nibName: nil, bundle: nil)
 
-        downloadManager.downloadsObservable.subscribe(onNext: {
+        downloadManager.downloadsObservable.subscribe(onNext: { [weak self] in
+            guard let self = self else { return }
+
             self.statusButton.isHidden = $0.isEmpty
             for task in $0.values {
                 task.rx.observeWeakly(Int64.self, "countOfBytesReceived").subscribe(onNext: {
-                    print($0)
-                })
+                    print(String(describing: $0))
+                }).disposed(by: self.disposeBag)
             }
-        })
+        }).disposed(by: disposeBag)
     }
 
     required init?(coder: NSCoder) {

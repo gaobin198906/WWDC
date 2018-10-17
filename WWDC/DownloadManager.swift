@@ -154,8 +154,6 @@ final class DownloadManager: NSObject {
     func cancelDownload(_ url: String) -> Bool {
         if let task = downloadTasks[url] {
             task.cancel()
-            downloadTasks.removeValue(forKey: url)
-            NotificationCenter.default.post(name: Notification.Name.DownloadManagerDownloadCancelled, object: url)
             return true
         }
 
@@ -453,15 +451,16 @@ extension DownloadManager: URLSessionDownloadDelegate, URLSessionTaskDelegate {
 
         let originalAbsoluteURLString = originalURL.absoluteString
 
-        let info: [String: Error]?
+        downloadTasks.removeValue(forKey: originalAbsoluteURLString)
 
         if let error = error {
-            info = ["error": error]
-        } else {
-            info = nil
+            let nsError = error as NSError
+            if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled {
+                NotificationCenter.default.post(name: .DownloadManagerDownloadCancelled, object: originalAbsoluteURLString)
+            } else {
+                NotificationCenter.default.post(name: .DownloadManagerDownloadFailed, object: originalAbsoluteURLString, userInfo: ["error": error])
+            }
         }
-
-        NotificationCenter.default.post(name: .DownloadManagerDownloadFailed, object: originalAbsoluteURLString, userInfo: info)
     }
 
     fileprivate struct DownloadInfo {

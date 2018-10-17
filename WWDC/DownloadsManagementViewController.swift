@@ -9,36 +9,6 @@
 import Foundation
 import RxSwift
 
-final class DownloadStatusTableCellView: NSTableCellView {
-
-    init(frame frameRect: NSRect, task: URLSessionDownloadTask) {
-        super.init(frame: frameRect)
-
-        task.rx.observeWeakly(Int64.self, "countOfBytesReceived").observeOn(MainScheduler.instance).subscribe(onNext: {
-            self.progressIndicator.isIndeterminate = false
-            self.progressIndicator.maxValue = Double(task.countOfBytesExpectedToReceive)
-            self.progressIndicator.minValue = 0
-            self.progressIndicator.doubleValue = Double($0 ?? 0)
-        })
-
-        setup()
-    }
-
-    required init?(coder decoder: NSCoder) {
-        fatalError()
-    }
-
-    private lazy var progressIndicator: NSProgressIndicator = {
-        return NSProgressIndicator(frame: .zero)
-    }()
-
-    private func setup() {
-        progressIndicator.autoresizingMask = [.width, .height]
-        addSubview(progressIndicator)
-        progressIndicator.startAnimation(nil)
-    }
-}
-
 class DownloadsManagementViewController: NSViewController {
 
     private lazy var summaryLabel: VibrantTextField = {
@@ -83,6 +53,7 @@ class DownloadsManagementViewController: NSViewController {
         v.borderType = .noBorder
         v.documentView = self.tableView
         v.hasVerticalScroller = true
+        v.autohidesScrollers = true
         v.hasHorizontalScroller = false
         v.translatesAutoresizingMaskIntoConstraints = false
 
@@ -109,7 +80,11 @@ class DownloadsManagementViewController: NSViewController {
 
     var tasks = [URLSessionDownloadTask]() {
         didSet {
-            tableView.reloadData()
+            if tasks.count == 0 {
+                view.window?.close()
+            } else {
+                tableView.reloadData()
+            }
         }
     }
 
@@ -174,15 +149,15 @@ extension DownloadsManagementViewController: NSTableViewDataSource, NSTableViewD
         return rowView
     }
 
-    private func cellForTask(_ task: URLSessionDownloadTask) -> DownloadStatusTableCellView? {
-        var cell = tableView.makeView(withIdentifier: NSUserInterfaceItemIdentifier(rawValue: Constants.sessionCellIdentifier), owner: tableView) as? DownloadStatusTableCellView
+    private func cellForTask(_ task: URLSessionDownloadTask) -> DownloadsManagementTableCellView? {
+        var cell = tableView.makeView(withIdentifier: NSUserInterfaceItemIdentifier(rawValue: Constants.sessionCellIdentifier), owner: tableView) as? DownloadsManagementTableCellView
 
         if cell == nil {
-            cell = DownloadStatusTableCellView(frame: .zero, task: task)
+            cell = DownloadsManagementTableCellView(frame: .zero)
             cell?.identifier = NSUserInterfaceItemIdentifier(rawValue: Constants.sessionCellIdentifier)
         }
 //
-//        cell?.viewModel = viewModel
+        cell?.task = task
 //
         return cell
     }
