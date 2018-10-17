@@ -14,7 +14,6 @@ class DownloadsManagementViewController: NSViewController {
     lazy var tableView: WWDCTableView = {
         let v = WWDCTableView()
 
-        // We control the intial selection during initialization
         v.allowsEmptySelection = true
 
         v.wantsLayer = true
@@ -29,7 +28,7 @@ class DownloadsManagementViewController: NSViewController {
         v.gridColor = .darkGridColor
         v.selectionHighlightStyle = .none // see WWDCTableRowView
 
-        let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier(rawValue: "session"))
+        let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier(rawValue: "download"))
         v.addTableColumn(column)
 
         return v
@@ -54,6 +53,7 @@ class DownloadsManagementViewController: NSViewController {
         tableView.delegate = self
         tableView.dataSource = self
 
+        // TODO: Put sizes into the metrics
         view = NSView(frame: NSRect(x: 0, y: 0, width: 500, height: 500))
 
         view.addSubview(scrollView)
@@ -90,6 +90,7 @@ class DownloadsManagementViewController: NSViewController {
 
         super.init(nibName: nil, bundle: nil)
 
+        // TODO: memory management
         downloadManager.downloadsObservable.subscribe(onNext: {
             self.downloads = Array($0.values).sorted(by: { $0.task.taskIdentifier < $1.task.taskIdentifier })
         })
@@ -116,14 +117,7 @@ extension DownloadsManagementViewController: NSTableViewDataSource, NSTableViewD
     }
 
     func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
-        let download = downloads[row]
-//
-//        switch sessionRow.kind {
-//        case .session(let viewModel):
-            return cellForDownload(download)
-//        case .sectionHeader(let title):
-//            return cellForSectionTitle(title)
-//        }
+        return cellForDownload(downloads[row])
     }
 
     func tableView(_ tableView: NSTableView, rowViewForRow row: Int) -> NSTableRowView? {
@@ -133,14 +127,7 @@ extension DownloadsManagementViewController: NSTableViewDataSource, NSTableViewD
             rowView = WWDCTableRowView(frame: .zero)
             rowView?.identifier = NSUserInterfaceItemIdentifier(rawValue: Constants.rowIdentifier)
         }
-//
-//        switch displayedRows[row].kind {
-//        case .sectionHeader:
-//            rowView?.isGroupRowStyle = true
-//        default:
-//            rowView?.isGroupRowStyle = false
-//        }
-//
+
         return rowView
     }
 
@@ -151,58 +138,24 @@ extension DownloadsManagementViewController: NSTableViewDataSource, NSTableViewD
             cell = DownloadsManagementTableCellView(frame: .zero)
             cell?.identifier = NSUserInterfaceItemIdentifier(rawValue: Constants.downloadStatusCellIdentifier)
         }
-//
+
         cell?.download = download
-//
+
         return cell
     }
-//
-//    private func cellForSectionTitle(_ title: String) -> TitleTableCellView? {
-//        var cell = tableView.makeView(withIdentifier: NSUserInterfaceItemIdentifier(rawValue: Constants.titleCellIdentifier), owner: tableView) as? TitleTableCellView
-//
-//        if cell == nil {
-//            cell = TitleTableCellView(frame: .zero)
-//            cell?.identifier = NSUserInterfaceItemIdentifier(rawValue: Constants.titleCellIdentifier)
-//        }
-//
-//        cell?.title = title
-//
-//        return cell
-//    }
 
     func tableView(_ tableView: NSTableView, heightOfRow row: Int) -> CGFloat {
-//        switch displayedRows[row].kind {
-//        case .session:
-            return Metrics.rowHeight
-//        case .sectionHeader:
-//            return Metrics.headerRowHeight
-//        }
+        return Metrics.rowHeight
     }
 
     func tableView(_ tableView: NSTableView, shouldSelectRow row: Int) -> Bool {
-//        switch displayedRows[row].kind {
-//        case .sectionHeader:
-            return false
-//        case .session:
-//            return true
-//        }
+        return false
     }
-
-    func tableView(_ tableView: NSTableView, isGroupRow row: Int) -> Bool {
-//        switch displayedRows[row].kind {
-//        case .sectionHeader:
-//            return true
-//        case .session:
-            return false
-//        }
-    }
-
 }
 
 extension DownloadsManagementViewController: NSPopoverDelegate {
 
     func popoverShouldDetach(_ popover: NSPopover) -> Bool {
-
         return true
     }
 }
