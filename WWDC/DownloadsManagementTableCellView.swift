@@ -23,7 +23,7 @@ final class DownloadsManagementTableCellView: NSTableCellView {
             disposeBag = DisposeBag()
             resetUI()
 
-            sessionTitleLabel.stringValue = download?.sessionID.sessionIdentifier ?? "Missing Session ID"
+            sessionTitleLabel.stringValue = download?.title ?? "Missing Session ID"
             guard let task = download?.task else { return }
 
             task.rx.observeWeakly(Int64.self, "countOfBytesReceived").observeOn(MainScheduler.instance).subscribe(onNext: { [weak task] in

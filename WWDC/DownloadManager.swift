@@ -55,7 +55,7 @@ final class DownloadManager: NSObject {
     struct Download {
         // TODO: Not sure what information is best to share. I could do the title, like now
         // or the sesion identifier and let the consumer figure out what to display
-        let sessionID: SessionIdentifier
+        let title: String
         let task: URLSessionDownloadTask
     }
 
@@ -92,7 +92,7 @@ final class DownloadManager: NSObject {
                     let asset = storage.asset(with: URL(string: key)!),
                      let session = asset.session.first {
 
-                    self.downloadTasks[key] = Download(sessionID: SessionIdentifier(session.title), task: task)
+                    self.downloadTasks[key] = Download(title: session.title, task: task)
                 } else {
                     // We have a task that is not associated with a session at all, lets cancel it
                     task.cancel()
@@ -114,7 +114,7 @@ final class DownloadManager: NSObject {
 
     func download(_ asset: SessionAsset) {
         let url = asset.remoteURL
-        let id = SessionIdentifier(asset.session.first?.title ?? "No Title")
+        let title = asset.session.first?.title ?? "No Title"
 
         if isDownloading(url) || hasVideo(url) {
             return
@@ -122,7 +122,7 @@ final class DownloadManager: NSObject {
 
         let task = backgroundSession.downloadTask(with: URL(string: url)!)
         if let key = task.originalRequest?.url!.absoluteString {
-            downloadTasks[key] = Download(sessionID: id, task: task)
+            downloadTasks[key] = Download(title: title, task: task)
             task.resume()
             NotificationCenter.default.post(name: .DownloadManagerDownloadStarted, object: url)
         } else {
