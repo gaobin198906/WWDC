@@ -52,16 +52,23 @@ extension URL {
 
 final class DownloadManager: NSObject {
 
+    struct Download {
+        // TODO: Not sure what information is best to share. I could do the title, like now
+        // or the sesion identifier and let the consumer figure out what to display
+        let sessionID: SessionIdentifier
+        let task: URLSessionDownloadTask
+    }
+
     private let log = OSLog(subsystem: "WWDC", category: "DownloadManager")
     private let configuration = URLSessionConfiguration.background(withIdentifier: "WWDC Video Downloader")
     private var backgroundSession: Foundation.URLSession!
-    private var downloadTasks: [String: URLSessionDownloadTask] = [:] {
+    private var downloadTasks: [String: Download] = [:] {
         didSet {
             downloadTasksSubject.onNext(downloadTasks)
         }
     }
-    private let downloadTasksSubject = BehaviorSubject<[String: URLSessionDownloadTask]>(value: [:])
-    var downloadsObservable: Observable<[String: URLSessionDownloadTask]> {
+    private let downloadTasksSubject = BehaviorSubject<[String: Download]>(value: [:])
+    var downloadsObservable: Observable<[String: Download]> {
         return downloadTasksSubject.asObservable()
     }
     private let defaults = UserDefaults.standard
@@ -81,8 +88,14 @@ final class DownloadManager: NSObject {
 
         backgroundSession.getTasksWithCompletionHandler { _, _, pendingTasks in
             for task in pendingTasks {
-                if let key = task.originalRequest?.url!.absoluteString {
-                    self.downloadTasks[key] = task
+                if let key = task.originalRequest?.url!.absoluteString,
+                    let asset = storage.asset(with: URL(string: key)!),
+                     let session = asset.session.first {
+
+                    self.downloadTasks[key] = Download(sessionID: SessionIdentifier(session.title), task: task)
+                } else {
+                    // We have a task that is not associated with a session at all, lets cancel it
+                    task.cancel()
                 }
             }
         }
@@ -99,31 +112,28 @@ final class DownloadManager: NSObject {
         return Preferences.shared.localVideoStorageURL.appendingPathComponent(asset.relativeLocalURL).path
     }
 
-    func allTasks() -> [URLSessionDownloadTask] {
-        return Array(downloadTasks.values)
-    }
-
     func download(_ asset: SessionAsset) {
-        downloadRemoteUrl(asset.remoteURL)
-    }
+        let url = asset.remoteURL
+        let id = SessionIdentifier(asset.session.first?.title ?? "No Title")
 
-    private func downloadRemoteUrl(_ url: String) {
         if isDownloading(url) || hasVideo(url) {
             return
         }
 
         let task = backgroundSession.downloadTask(with: URL(string: url)!)
         if let key = task.originalRequest?.url!.absoluteString {
-            downloadTasks[key] = task
+            downloadTasks[key] = Download(sessionID: id, task: task)
+            task.resume()
+            NotificationCenter.default.post(name: .DownloadManagerDownloadStarted, object: url)
+        } else {
+            // This has happened when running 2 instances of the app.
+            NotificationCenter.default.post(name: .DownloadManagerDownloadFailed, object: url)
         }
-        task.resume()
-
-        NotificationCenter.default.post(name: .DownloadManagerDownloadStarted, object: url)
     }
 
     func pauseDownload(_ url: String) -> Bool {
-        if let task = downloadTasks[url] {
-            task.suspend()
+        if let download = downloadTasks[url] {
+            download.task.suspend()
             NotificationCenter.default.post(name: .DownloadManagerDownloadPaused, object: url)
             return true
         }
@@ -137,8 +147,8 @@ final class DownloadManager: NSObject {
     }
 
     func resumeDownload(_ url: String) -> Bool {
-        if let task = downloadTasks[url] {
-            task.resume()
+        if let download = downloadTasks[url] {
+            download.task.resume()
             NotificationCenter.default.post(name: .DownloadManagerDownloadResumed, object: url)
             return true
         }
@@ -152,8 +162,8 @@ final class DownloadManager: NSObject {
     }
 
     func cancelDownload(_ url: String) -> Bool {
-        if let task = downloadTasks[url] {
-            task.cancel()
+        if let download = downloadTasks[url] {
+            download.task.cancel()
             return true
         }
 

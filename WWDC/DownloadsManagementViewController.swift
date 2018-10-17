@@ -11,16 +11,6 @@ import RxSwift
 
 class DownloadsManagementViewController: NSViewController {
 
-    private lazy var summaryLabel: VibrantTextField = {
-        let l = VibrantTextField(labelWithString: "Downloads")
-        l.font = .systemFont(ofSize: 25)
-        l.textColor = .secondaryLabelColor
-        l.isSelectable = true
-        l.translatesAutoresizingMaskIntoConstraints = false
-
-        return l
-    }()
-
     lazy var tableView: WWDCTableView = {
         let v = WWDCTableView()
 
@@ -32,7 +22,7 @@ class DownloadsManagementViewController: NSViewController {
         v.allowsMultipleSelection = true
         v.backgroundColor = .clear
         v.headerView = nil
-        v.rowHeight = Metrics.sessionRowHeight
+        v.rowHeight = Metrics.rowHeight
         v.autoresizingMask = [.width, .height]
         v.floatsGroupRows = true
         v.gridStyleMask = .solidHorizontalGridLineMask
@@ -65,12 +55,9 @@ class DownloadsManagementViewController: NSViewController {
         tableView.dataSource = self
 
         view = NSView(frame: NSRect(x: 0, y: 0, width: 500, height: 500))
-        view.addSubview(summaryLabel)
-        view.topAnchor.constraint(equalTo: summaryLabel.topAnchor, constant: -20).isActive = true
-        view.centerXAnchor.constraint(equalTo: summaryLabel.centerXAnchor).isActive = true
 
         view.addSubview(scrollView)
-        scrollView.topAnchor.constraint(equalTo: summaryLabel.bottomAnchor).isActive = true
+        scrollView.topAnchor.constraint(equalTo: view.topAnchor, constant: 20).isActive = true
         scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor).isActive = true
         scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor).isActive = true
         scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor).isActive = true
@@ -78,14 +65,24 @@ class DownloadsManagementViewController: NSViewController {
 
     let downloadManager: DownloadManager
 
-    var tasks = [URLSessionDownloadTask]() {
+    var downloads = [DownloadManager.Download]() {
         didSet {
-            if tasks.count == 0 {
+            if downloads.count == 0 {
                 view.window?.close()
             } else {
                 tableView.reloadData()
+                let height = min(Metrics.rowHeight * CGFloat(downloads.count) + 50, preferredMaximumSize.height)
+                self.preferredContentSize = NSSize(width: 500, height: height)
             }
         }
+    }
+
+    override var preferredMaximumSize: NSSize {
+        // TODO: More stable way for this
+        var mainSize = NSApp.keyWindow?.frame.size
+        mainSize?.height -= 50
+
+        return mainSize ?? NSSize(width: 500, height: 500) // TODO: Default must fit within a screen
     }
 
     init(downloadManager: DownloadManager) {
@@ -94,7 +91,7 @@ class DownloadsManagementViewController: NSViewController {
         super.init(nibName: nil, bundle: nil)
 
         downloadManager.downloadsObservable.subscribe(onNext: {
-            self.tasks = Array($0.values)
+            self.downloads = Array($0.values).sorted(by: { $0.task.taskIdentifier < $1.task.taskIdentifier })
         })
     }
 
@@ -106,26 +103,24 @@ class DownloadsManagementViewController: NSViewController {
 extension DownloadsManagementViewController: NSTableViewDataSource, NSTableViewDelegate {
 
     fileprivate struct Metrics {
-        static let headerRowHeight: CGFloat = 20
-        static let sessionRowHeight: CGFloat = 64
+        static let rowHeight: CGFloat = 64
     }
 
     private struct Constants {
-        static let sessionCellIdentifier = "sessionCell"
-        static let titleCellIdentifier = "titleCell"
+        static let downloadStatusCellIdentifier = "downloadStatusCellIdentifier"
         static let rowIdentifier = "row"
     }
 
     func numberOfRows(in tableView: NSTableView) -> Int {
-        return tasks.count
+        return downloads.count
     }
 
     func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
-        let task = tasks[row]
+        let download = downloads[row]
 //
 //        switch sessionRow.kind {
 //        case .session(let viewModel):
-            return cellForTask(task)
+            return cellForDownload(download)
 //        case .sectionHeader(let title):
 //            return cellForSectionTitle(title)
 //        }
@@ -149,15 +144,15 @@ extension DownloadsManagementViewController: NSTableViewDataSource, NSTableViewD
         return rowView
     }
 
-    private func cellForTask(_ task: URLSessionDownloadTask) -> DownloadsManagementTableCellView? {
-        var cell = tableView.makeView(withIdentifier: NSUserInterfaceItemIdentifier(rawValue: Constants.sessionCellIdentifier), owner: tableView) as? DownloadsManagementTableCellView
+    private func cellForDownload(_ download: DownloadManager.Download) -> DownloadsManagementTableCellView? {
+        var cell = tableView.makeView(withIdentifier: NSUserInterfaceItemIdentifier(rawValue: Constants.downloadStatusCellIdentifier), owner: tableView) as? DownloadsManagementTableCellView
 
         if cell == nil {
             cell = DownloadsManagementTableCellView(frame: .zero)
-            cell?.identifier = NSUserInterfaceItemIdentifier(rawValue: Constants.sessionCellIdentifier)
+            cell?.identifier = NSUserInterfaceItemIdentifier(rawValue: Constants.downloadStatusCellIdentifier)
         }
 //
-        cell?.task = task
+        cell?.download = download
 //
         return cell
     }
@@ -178,7 +173,7 @@ extension DownloadsManagementViewController: NSTableViewDataSource, NSTableViewD
     func tableView(_ tableView: NSTableView, heightOfRow row: Int) -> CGFloat {
 //        switch displayedRows[row].kind {
 //        case .session:
-            return Metrics.sessionRowHeight
+            return Metrics.rowHeight
 //        case .sectionHeader:
 //            return Metrics.headerRowHeight
 //        }

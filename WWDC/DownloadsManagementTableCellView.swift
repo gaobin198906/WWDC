@@ -18,20 +18,25 @@ final class DownloadsManagementTableCellView: NSTableCellView {
     }()
 
     var disposeBag = DisposeBag()
-    weak var task: URLSessionDownloadTask? {
+    var download: DownloadManager.Download? {
         didSet {
             disposeBag = DisposeBag()
+            resetUI()
 
-            sessionTitleLabel.stringValue = task?.originalRequest?.url?.lastPathComponent ?? "Weird"
-            guard let task = task else { return }
+            sessionTitleLabel.stringValue = download?.sessionID.sessionIdentifier ?? "Missing Session ID"
+            guard let task = download?.task else { return }
 
             task.rx.observeWeakly(Int64.self, "countOfBytesReceived").observeOn(MainScheduler.instance).subscribe(onNext: { [weak task] in
                 guard let task = task else { return }
 
-                self.progressIndicator.isIndeterminate = false
-                self.progressIndicator.maxValue = Double(task.countOfBytesExpectedToReceive)
-                self.progressIndicator.minValue = 0
-                self.progressIndicator.doubleValue = Double($0 ?? 0)
+                if task.countOfBytesExpectedToReceive != NSURLSessionTransferSizeUnknown && task.countOfBytesExpectedToReceive != 0 {
+                    self.progressIndicator.isIndeterminate = false
+                    self.progressIndicator.maxValue = Double(task.countOfBytesExpectedToReceive)
+                    self.progressIndicator.minValue = 0
+                    self.progressIndicator.doubleValue = Double($0 ?? 0)
+                } else {
+                    self.progressIndicator.startAnimation(nil)
+                }
                 self.downloadStatusLabel.stringValue = "\(DownloadsManagementTableCellView.byteCounterFormatter.string(fromByteCount: task.countOfBytesReceived)) of \(DownloadsManagementTableCellView.byteCounterFormatter.string(fromByteCount: task.countOfBytesExpectedToReceive))"
             }).disposed(by: disposeBag)
         }
@@ -46,6 +51,21 @@ final class DownloadsManagementTableCellView: NSTableCellView {
 
     required init?(coder decoder: NSCoder) {
         fatalError()
+    }
+
+    override func prepareForReuse() {
+        super.prepareForReuse()
+
+        resetUI()
+    }
+
+    private func resetUI() {
+
+        // TODO: Probably needs to be put into the observer
+        progressIndicator.minValue = 0
+        progressIndicator.maxValue = 0
+        progressIndicator.isIndeterminate = true
+        progressIndicator.startAnimation(nil)
     }
 
     private lazy var sessionTitleLabel: NSTextField = {
@@ -84,7 +104,7 @@ final class DownloadsManagementTableCellView: NSTableCellView {
 
     @objc
     private func cancel() {
-        task?.cancel()
+        download?.task.cancel()
     }
 
     private func setup() {
@@ -107,7 +127,5 @@ final class DownloadsManagementTableCellView: NSTableCellView {
         sessionTitleLabel.leadingAnchor.constraint(equalTo: progressIndicator.leadingAnchor).isActive = true
         downloadStatusLabel.topAnchor.constraint(equalTo: progressIndicator.bottomAnchor).isActive = true
         downloadStatusLabel.leadingAnchor.constraint(equalTo: progressIndicator.leadingAnchor).isActive = true
-
-        progressIndicator.startAnimation(nil)
     }
 }

@@ -23,7 +23,7 @@ class DownloadsStatusViewController: NSViewController {
             guard let self = self else { return }
 
             self.statusButton.isHidden = $0.isEmpty
-            for task in $0.values {
+            for task in $0.values.map({ $0.task }) {
                 task.rx.observeWeakly(Int64.self, "countOfBytesReceived").subscribe(onNext: {
                     print(String(describing: $0))
                 }).disposed(by: self.disposeBag)
