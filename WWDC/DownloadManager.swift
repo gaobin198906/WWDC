@@ -60,7 +60,11 @@ final class DownloadManager: NSObject {
     }
 
     private let log = OSLog(subsystem: "WWDC", category: "DownloadManager")
-    private let configuration = URLSessionConfiguration.background(withIdentifier: "WWDC Video Downloader")
+    private let configuration: URLSessionConfiguration = {
+        let configuration = URLSessionConfiguration.background(withIdentifier: "WWDC Video Downloader")
+        configuration.httpMaximumConnectionsPerHost = 3 // TODO: User preference (on 100MiB doesn't really use more than 6)
+        return configuration
+    }()
     private var backgroundSession: Foundation.URLSession!
     private var downloadTasks: [String: Download] = [:] {
         didSet {
@@ -80,7 +84,7 @@ final class DownloadManager: NSObject {
     override init() {
         super.init()
 
-        backgroundSession = URLSession(configuration: configuration, delegate: self, delegateQueue: OperationQueue.main)
+        backgroundSession = URLSession(configuration: configuration, delegate: self, delegateQueue: .main)
     }
 
     func start(with storage: Storage) {
@@ -126,7 +130,6 @@ final class DownloadManager: NSObject {
             task.resume()
             NotificationCenter.default.post(name: .DownloadManagerDownloadStarted, object: url)
         } else {
-            // This has happened when running 2 instances of the app.
             NotificationCenter.default.post(name: .DownloadManagerDownloadFailed, object: url)
         }
     }
@@ -427,7 +430,6 @@ final class DownloadManager: NSObject {
             topFolderMonitor.stopMonitoring()
         }
     }
-
 }
 
 extension DownloadManager: URLSessionDownloadDelegate, URLSessionTaskDelegate {
@@ -486,7 +488,6 @@ extension DownloadManager: URLSessionDownloadDelegate, URLSessionTaskDelegate {
         let info = DownloadInfo(totalBytesWritten: totalBytesWritten, totalBytesExpectedToWrite: totalBytesExpectedToWrite, progress: progress)
         NotificationCenter.default.post(name: .DownloadManagerDownloadProgressChanged, object: originalURL, userInfo: ["info": info])
     }
-
 }
 
 extension NotificationCenter {

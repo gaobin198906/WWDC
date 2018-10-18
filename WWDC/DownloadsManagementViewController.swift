@@ -71,7 +71,7 @@ class DownloadsManagementViewController: NSViewController {
                 view.window?.close()
             } else {
                 tableView.reloadData()
-                let height = min(Metrics.rowHeight * CGFloat(downloads.count) + 50, preferredMaximumSize.height)
+                let height = min((Metrics.rowHeight + Metrics.tableGridLineHeight) * CGFloat(downloads.count) + Metrics.topPadding, preferredMaximumSize.height)
                 self.preferredContentSize = NSSize(width: 500, height: height)
             }
         }
@@ -92,7 +92,17 @@ class DownloadsManagementViewController: NSViewController {
 
         // TODO: memory management
         downloadManager.downloadsObservable.subscribe(onNext: {
-            self.downloads = Array($0.values).sorted(by: { $0.task.taskIdentifier < $1.task.taskIdentifier })
+            self.downloads = Array($0.values).sorted(by: { left, right in
+                // This sorting is fine but doesn't update when a task goes from 0/pending to active
+                switch (left.task.countOfBytesExpectedToReceive, right.task.countOfBytesExpectedToReceive) {
+                case (0, _):
+                    return false
+                case (_, 0):
+                    return true
+                default:
+                    return left.task.taskIdentifier < right.task.taskIdentifier
+                }
+            })
         })
     }
 
@@ -104,6 +114,8 @@ class DownloadsManagementViewController: NSViewController {
 extension DownloadsManagementViewController: NSTableViewDataSource, NSTableViewDelegate {
 
     fileprivate struct Metrics {
+        static let topPadding: CGFloat = 20
+        static let tableGridLineHeight: CGFloat = 2
         static let rowHeight: CGFloat = 64
     }
 

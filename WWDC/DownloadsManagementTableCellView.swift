@@ -21,12 +21,12 @@ final class DownloadsManagementTableCellView: NSTableCellView {
     var download: DownloadManager.Download? {
         didSet {
             disposeBag = DisposeBag()
-            resetUI()
 
             sessionTitleLabel.stringValue = download?.title ?? "Missing Session ID"
             guard let task = download?.task else { return }
 
-            task.rx.observeWeakly(Int64.self, "countOfBytesReceived").observeOn(MainScheduler.instance).subscribe(onNext: { [weak task] in
+            // TODO: Whatever observation mechanism I land on, do throttle this
+            task.rx.observeWeakly(Int64.self, "countOfBytesReceived").throttle(0.1, latest: true, scheduler: MainScheduler.instance).observeOn(MainScheduler.instance).subscribe(onNext: { [weak task] in
                 guard let task = task else { return }
 
                 if task.countOfBytesExpectedToReceive != NSURLSessionTransferSizeUnknown && task.countOfBytesExpectedToReceive != 0 {
@@ -35,6 +35,9 @@ final class DownloadsManagementTableCellView: NSTableCellView {
                     self.progressIndicator.minValue = 0
                     self.progressIndicator.doubleValue = Double($0 ?? 0)
                 } else {
+                    self.progressIndicator.minValue = 0
+                    self.progressIndicator.maxValue = 0
+                    self.progressIndicator.isIndeterminate = true
                     self.progressIndicator.startAnimation(nil)
                 }
                 self.downloadStatusLabel.stringValue = "\(DownloadsManagementTableCellView.byteCounterFormatter.string(fromByteCount: task.countOfBytesReceived)) of \(DownloadsManagementTableCellView.byteCounterFormatter.string(fromByteCount: task.countOfBytesExpectedToReceive))"
@@ -51,21 +54,6 @@ final class DownloadsManagementTableCellView: NSTableCellView {
 
     required init?(coder decoder: NSCoder) {
         fatalError()
-    }
-
-    override func prepareForReuse() {
-        super.prepareForReuse()
-
-        resetUI()
-    }
-
-    private func resetUI() {
-
-        // TODO: Probably needs to be put into the observer
-        progressIndicator.minValue = 0
-        progressIndicator.maxValue = 0
-        progressIndicator.isIndeterminate = true
-        progressIndicator.startAnimation(nil)
     }
 
     private lazy var sessionTitleLabel: NSTextField = {
@@ -88,7 +76,18 @@ final class DownloadsManagementTableCellView: NSTableCellView {
         return l
     }()
 
-    private lazy var stopButton: NSButton = {
+    private lazy var suspendResumeButton: NSButton = {
+        // TODO: Better buttons, looks like AppKit doesn't have the right thing
+        let v = NSButton(image: NSImage(named: "NSPauseTemplate")!, target: self, action: #selector(togglePause))
+        v.alternateImage = NSImage(named: "NSPlayTemplate")
+        v.translatesAutoresizingMaskIntoConstraints = false
+        v.isBordered = false
+        v.imagePosition = .imageOnly
+        v.setButtonType(.toggle)
+        return v
+    }()
+
+    private lazy var cancelButton: NSButton = {
         let v = NSButton(image: NSImage(named: "NSStopProgressFreestandingTemplate")!, target: self, action: #selector(cancel))
         v.translatesAutoresizingMaskIntoConstraints = false
         v.isBordered = false
@@ -103,6 +102,18 @@ final class DownloadsManagementTableCellView: NSTableCellView {
     }()
 
     @objc
+    private func togglePause() {
+        // TODO: The button state should be wired to an observable
+        if download?.task.state == .suspended {
+            download?.task.resume()
+            suspendResumeButton.state = .off
+        } else if download?.task.state == .running {
+            download?.task.suspend()
+            suspendResumeButton.state = .on
+        }
+    }
+
+    @objc
     private func cancel() {
         download?.task.cancel()
     }
@@ -110,17 +121,23 @@ final class DownloadsManagementTableCellView: NSTableCellView {
     private func setup() {
 
         addSubview(progressIndicator)
-        addSubview(stopButton)
+        addSubview(cancelButton)
         addSubview(sessionTitleLabel)
         addSubview(downloadStatusLabel)
+        addSubview(suspendResumeButton)
 
         // Horizontal layout
         progressIndicator.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 20).isActive = true
         progressIndicator.centerYAnchor.constraint(equalTo: centerYAnchor).isActive = true
-        progressIndicator.trailingAnchor.constraint(equalTo: stopButton.leadingAnchor).isActive = true
-        stopButton.trailingAnchor.constraint(equalTo: trailingAnchor).isActive = true
-        stopButton.centerYAnchor.constraint(equalTo: progressIndicator.centerYAnchor).isActive = true
-        stopButton.widthAnchor.constraint(equalToConstant: 40).isActive = true
+        progressIndicator.trailingAnchor.constraint(equalTo: suspendResumeButton.leadingAnchor).isActive = true
+
+        suspendResumeButton.trailingAnchor.constraint(equalTo: cancelButton.leadingAnchor).isActive = true
+        suspendResumeButton.widthAnchor.constraint(equalToConstant: 40).isActive = true
+        suspendResumeButton.centerYAnchor.constraint(equalTo: progressIndicator.centerYAnchor).isActive = true
+
+        cancelButton.centerYAnchor.constraint(equalTo: progressIndicator.centerYAnchor).isActive = true
+        cancelButton.widthAnchor.constraint(equalToConstant: 40).isActive = true
+        cancelButton.trailingAnchor.constraint(equalTo: trailingAnchor).isActive = true
 
         // Vertical layout
         sessionTitleLabel.bottomAnchor.constraint(equalTo: progressIndicator.topAnchor).isActive = true

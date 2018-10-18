@@ -20,14 +20,7 @@ class DownloadsStatusViewController: NSViewController {
         super.init(nibName: nil, bundle: nil)
 
         downloadManager.downloadsObservable.subscribe(onNext: { [weak self] in
-            guard let self = self else { return }
-
-            self.statusButton.isHidden = $0.isEmpty
-            for task in $0.values.map({ $0.task }) {
-                task.rx.observeWeakly(Int64.self, "countOfBytesReceived").subscribe(onNext: {
-                    print(String(describing: $0))
-                }).disposed(by: self.disposeBag)
-            }
+            self?.statusButton.isHidden = $0.isEmpty
         }).disposed(by: disposeBag)
     }
 
