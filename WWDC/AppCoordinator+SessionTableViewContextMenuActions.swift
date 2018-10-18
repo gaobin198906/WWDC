@@ -71,19 +71,17 @@ extension AppCoordinator: SessionsTableViewControllerDelegate {
         }
 
         viewModels.forEach { viewModel in
-            guard let videoAsset = viewModel.session.asset(ofType: .hdVideo) else { return }
 
-            DownloadManager.shared.download(videoAsset)
+            DownloadManager.shared.download(viewModel.session)
         }
     }
 
     func sessionTableViewContextMenuActionCancelDownload(viewModels: [SessionViewModel]) {
         viewModels.forEach { viewModel in
-            guard let videoAsset = viewModel.session.asset(ofType: .hdVideo) else { return }
 
-            guard DownloadManager.shared.isDownloading(videoAsset.remoteURL) else { return }
+            guard DownloadManager.shared.isDownloading(viewModel.session) else { return }
 
-            DownloadManager.shared.deleteDownload(for: videoAsset)
+            DownloadManager.shared.deleteDownloadedFile(for: viewModel.session)
         }
     }
 

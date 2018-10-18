@@ -8,6 +8,7 @@
 
 import Foundation
 import RxSwift
+import ConfCore
 
 class DownloadsManagementViewController: NSViewController {
 
@@ -64,6 +65,7 @@ class DownloadsManagementViewController: NSViewController {
     }
 
     let downloadManager: DownloadManager
+    let storage: Storage
 
     var downloads = [DownloadManager.Download]() {
         didSet {
@@ -85,24 +87,15 @@ class DownloadsManagementViewController: NSViewController {
         return mainSize ?? NSSize(width: 500, height: 500) // TODO: Default must fit within a screen
     }
 
-    init(downloadManager: DownloadManager) {
+    init(downloadManager: DownloadManager, storage: Storage) {
         self.downloadManager = downloadManager
+        self.storage = storage
 
         super.init(nibName: nil, bundle: nil)
 
         // TODO: memory management
         downloadManager.downloadsObservable.subscribe(onNext: {
-            self.downloads = Array($0.values).sorted(by: { left, right in
-                // This sorting is fine but doesn't update when a task goes from 0/pending to active
-                switch (left.task.countOfBytesExpectedToReceive, right.task.countOfBytesExpectedToReceive) {
-                case (0, _):
-                    return false
-                case (_, 0):
-                    return true
-                default:
-                    return left.task.taskIdentifier < right.task.taskIdentifier
-                }
-            })
+            self.downloads = $0.sorted(by: <)
         })
     }
 
@@ -129,7 +122,21 @@ extension DownloadsManagementViewController: NSTableViewDataSource, NSTableViewD
     }
 
     func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
-        return cellForDownload(downloads[row])
+        let download = downloads[row]
+        guard let session = storage.session(with: download.session.sessionIdentifier) else { return nil }
+
+        var cell = tableView.makeView(withIdentifier: NSUserInterfaceItemIdentifier(rawValue: Constants.downloadStatusCellIdentifier), owner: tableView) as? DownloadsManagementTableCellView
+
+        if cell == nil {
+            cell = DownloadsManagementTableCellView(frame: .zero)
+            cell?.identifier = NSUserInterfaceItemIdentifier(rawValue: Constants.downloadStatusCellIdentifier)
+        }
+
+        cell?.sessionTitleLabel.stringValue = session.title
+        cell?.status = downloadManager.downloadStatusObservable(for: download)
+        cell?.download = download
+
+        return cell
     }
 
     func tableView(_ tableView: NSTableView, rowViewForRow row: Int) -> NSTableRowView? {
@@ -141,19 +148,6 @@ extension DownloadsManagementViewController: NSTableViewDataSource, NSTableViewD
         }
 
         return rowView
-    }
-
-    private func cellForDownload(_ download: DownloadManager.Download) -> DownloadsManagementTableCellView? {
-        var cell = tableView.makeView(withIdentifier: NSUserInterfaceItemIdentifier(rawValue: Constants.downloadStatusCellIdentifier), owner: tableView) as? DownloadsManagementTableCellView
-
-        if cell == nil {
-            cell = DownloadsManagementTableCellView(frame: .zero)
-            cell?.identifier = NSUserInterfaceItemIdentifier(rawValue: Constants.downloadStatusCellIdentifier)
-        }
-
-        cell?.download = download
-
-        return cell
     }
 
     func tableView(_ tableView: NSTableView, heightOfRow row: Int) -> CGFloat {

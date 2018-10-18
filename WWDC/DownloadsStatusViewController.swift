@@ -6,16 +6,18 @@
 //  Copyright © 2018 Guilherme Rambo. All rights reserved.
 //
 
-import Foundation
+import ConfCore
 import RxSwift
 
 class DownloadsStatusViewController: NSViewController {
 
     let downloadManager: DownloadManager
+    let storage: Storage
     let disposeBag = DisposeBag()
 
-    init(downloadManager: DownloadManager) {
+    init(downloadManager: DownloadManager, storage: Storage) {
         self.downloadManager = downloadManager
+        self.storage = storage
 
         super.init(nibName: nil, bundle: nil)
 
@@ -52,7 +54,7 @@ class DownloadsStatusViewController: NSViewController {
     @objc
     func test(sender: NSButton) {
         if presentedViewControllers?.isEmpty == true {
-            present(DownloadsManagementViewController(downloadManager: downloadManager), asPopoverRelativeTo: sender.bounds, of: sender, preferredEdge: .maxY, behavior: .semitransient)
+            present(DownloadsManagementViewController(downloadManager: downloadManager, storage: storage), asPopoverRelativeTo: sender.bounds, of: sender, preferredEdge: .maxY, behavior: .semitransient)
         } else {
             presentedViewControllers?.forEach(dismiss)
         }

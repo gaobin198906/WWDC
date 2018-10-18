@@ -18,30 +18,50 @@ final class DownloadsManagementTableCellView: NSTableCellView {
     }()
 
     var disposeBag = DisposeBag()
-    var download: DownloadManager.Download? {
+
+    var download: DownloadManager.Download?
+
+    var status: Observable<DownloadStatus>? {
         didSet {
             disposeBag = DisposeBag()
 
-            sessionTitleLabel.stringValue = download?.title ?? "Missing Session ID"
-            guard let task = download?.task else { return }
+            guard let status = status else { return }
 
-            // TODO: Whatever observation mechanism I land on, do throttle this
-            task.rx.observeWeakly(Int64.self, "countOfBytesReceived").throttle(0.1, latest: true, scheduler: MainScheduler.instance).observeOn(MainScheduler.instance).subscribe(onNext: { [weak task] in
-                guard let task = task else { return }
+            status
+                .throttle(0.1, latest: true, scheduler: MainScheduler.instance)
+                .subscribe(onNext: { [weak self] status in
+                    switch status {
+                    case .downloading(let info):
+                        if info.totalBytesExpectedToWrite > 0 {
+                            self?.progressIndicator.isIndeterminate = false
+                            self?.progressIndicator.doubleValue = info.progress
+                            self?.downloadStatusLabel.stringValue = "\(DownloadsManagementTableCellView.byteCounterFormatter.string(fromByteCount: info.totalBytesWritten)) of \(DownloadsManagementTableCellView.byteCounterFormatter.string(fromByteCount: info.totalBytesExpectedToWrite))"
+                        } else {
+                            self?.progressIndicator.isIndeterminate = true
+                            self?.progressIndicator.startAnimation(nil)
+                        }
+                    case .paused, .cancelled, .none, .failed:()
 
-                if task.countOfBytesExpectedToReceive != NSURLSessionTransferSizeUnknown && task.countOfBytesExpectedToReceive != 0 {
-                    self.progressIndicator.isIndeterminate = false
-                    self.progressIndicator.maxValue = Double(task.countOfBytesExpectedToReceive)
-                    self.progressIndicator.minValue = 0
-                    self.progressIndicator.doubleValue = Double($0 ?? 0)
-                } else {
-                    self.progressIndicator.minValue = 0
-                    self.progressIndicator.maxValue = 0
-                    self.progressIndicator.isIndeterminate = true
-                    self.progressIndicator.startAnimation(nil)
-                }
-                self.downloadStatusLabel.stringValue = "\(DownloadsManagementTableCellView.byteCounterFormatter.string(fromByteCount: task.countOfBytesReceived)) of \(DownloadsManagementTableCellView.byteCounterFormatter.string(fromByteCount: task.countOfBytesExpectedToReceive))"
+                    case .finished: ()
+
+                    }
             }).disposed(by: disposeBag)
+//            task.rx.observeWeakly(Int64.self, "countOfBytesReceived").throttle(0.1, latest: true, scheduler: MainScheduler.instance).observeOn(MainScheduler.instance).subscribe(onNext: { [weak task] in
+//                guard let task = task else { return }
+//
+//                if task.countOfBytesExpectedToReceive != NSURLSessionTransferSizeUnknown && task.countOfBytesExpectedToReceive != 0 {
+//                    self.progressIndicator.isIndeterminate = false
+//                    self.progressIndicator.maxValue = Double(task.countOfBytesExpectedToReceive)
+//                    self.progressIndicator.minValue = 0
+//                    self.progressIndicator.doubleValue = Double($0 ?? 0)
+//                } else {
+//                    self.progressIndicator.minValue = 0
+//                    self.progressIndicator.maxValue = 0
+//                    self.progressIndicator.isIndeterminate = true
+//                    self.progressIndicator.startAnimation(nil)
+//                }
+//                self.downloadStatusLabel.stringValue = "\(DownloadsManagementTableCellView.byteCounterFormatter.string(fromByteCount: task.countOfBytesReceived)) of \(DownloadsManagementTableCellView.byteCounterFormatter.string(fromByteCount: task.countOfBytesExpectedToReceive))"
+//            }).disposed(by: disposeBag)
         }
     }
 
@@ -56,7 +76,7 @@ final class DownloadsManagementTableCellView: NSTableCellView {
         fatalError()
     }
 
-    private lazy var sessionTitleLabel: NSTextField = {
+    lazy var sessionTitleLabel: NSTextField = {
         let l = VibrantTextField(labelWithString: "What's New In Swift")
         l.font = .systemFont(ofSize: 13)
         l.textColor = .labelColor
@@ -97,6 +117,8 @@ final class DownloadsManagementTableCellView: NSTableCellView {
 
     private lazy var progressIndicator: NSProgressIndicator = {
         let v = NSProgressIndicator(frame: .zero)
+        v.minValue = 0
+        v.maxValue = 1
         v.translatesAutoresizingMaskIntoConstraints = false
         return v
     }()
@@ -104,18 +126,18 @@ final class DownloadsManagementTableCellView: NSTableCellView {
     @objc
     private func togglePause() {
         // TODO: The button state should be wired to an observable
-        if download?.task.state == .suspended {
-            download?.task.resume()
+        if download?.state == .suspended {
+            download?.resume()
             suspendResumeButton.state = .off
-        } else if download?.task.state == .running {
-            download?.task.suspend()
+        } else if download?.state == .running {
+            download?.pause()
             suspendResumeButton.state = .on
         }
     }
 
     @objc
     private func cancel() {
-        download?.task.cancel()
+        download?.cancel()
     }
 
     private func setup() {

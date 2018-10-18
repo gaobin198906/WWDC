@@ -28,7 +28,7 @@ extension Notification.Name {
 
 enum DownloadStatus {
     case none
-    case downloading(Double)
+    case downloading(DownloadManager.DownloadInfo)
     case paused
     case cancelled
     case finished
@@ -52,32 +52,63 @@ extension URL {
 
 final class DownloadManager: NSObject {
 
+    static let downloadQuality = SessionAssetType.hdVideo
+
     struct Download {
-        // TODO: Not sure what information is best to share. I could do the title, like now
-        // or the sesion identifier and let the consumer figure out what to display
-        let title: String
-        let task: URLSessionDownloadTask
+        let session: SessionIdentifier
+        fileprivate var remoteURL: String
+        fileprivate weak var task: URLSessionDownloadTask?
+
+        func pause() {
+            guard let task = task else { return }
+            task.suspend()
+            NotificationCenter.default.post(name: .DownloadManagerDownloadPaused, object: remoteURL)
+        }
+
+        func resume() {
+            guard let task = task else { return }
+            task.resume()
+            NotificationCenter.default.post(name: .DownloadManagerDownloadResumed, object: remoteURL)
+        }
+
+        func cancel() {
+            guard let task = task else { return }
+            task.cancel()
+        }
+
+        var state: URLSessionTask.State {
+            return task?.state ?? .canceling
+        }
+
+        static func < (lhs: Download, rhs: Download) -> Bool {
+            guard let left = lhs.task, let right = rhs.task else { return false }
+
+            switch (left.countOfBytesExpectedToReceive, right.countOfBytesExpectedToReceive) {
+            case (0, _):
+                return false
+            case (_, 0):
+                return true
+            default:
+                return left.taskIdentifier < right.taskIdentifier
+            }
+        }
     }
 
     private let log = OSLog(subsystem: "WWDC", category: "DownloadManager")
-    private let configuration: URLSessionConfiguration = {
-        let configuration = URLSessionConfiguration.background(withIdentifier: "WWDC Video Downloader")
-        configuration.httpMaximumConnectionsPerHost = 3 // TODO: User preference (on 100MiB doesn't really use more than 6)
-        return configuration
-    }()
+    private let configuration = URLSessionConfiguration.background(withIdentifier: "WWDC Video Downloader")
     private var backgroundSession: Foundation.URLSession!
     private var downloadTasks: [String: Download] = [:] {
         didSet {
-            downloadTasksSubject.onNext(downloadTasks)
+            downloadTasksSubject.onNext(Array(downloadTasks.values))
         }
     }
-    private let downloadTasksSubject = BehaviorSubject<[String: Download]>(value: [:])
-    var downloadsObservable: Observable<[String: Download]> {
+    private let downloadTasksSubject = BehaviorSubject<[Download]>(value: [])
+    var downloadsObservable: Observable<[Download]> {
         return downloadTasksSubject.asObservable()
     }
     private let defaults = UserDefaults.standard
 
-    private var storage: Storage!
+    var storage: Storage!
 
     static let shared: DownloadManager = DownloadManager()
 
@@ -87,16 +118,19 @@ final class DownloadManager: NSObject {
         backgroundSession = URLSession(configuration: configuration, delegate: self, delegateQueue: .main)
     }
 
+    // MARK: - Public API
+
     func start(with storage: Storage) {
         self.storage = storage
 
         backgroundSession.getTasksWithCompletionHandler { _, _, pendingTasks in
             for task in pendingTasks {
                 if let key = task.originalRequest?.url!.absoluteString,
-                    let asset = storage.asset(with: URL(string: key)!),
-                     let session = asset.session.first {
+                    let remoteURL = URL(string: key),
+                    let asset = storage.asset(with: remoteURL),
+                    let session = asset.session.first {
 
-                    self.downloadTasks[key] = Download(title: session.title, task: task)
+                    self.downloadTasks[key] = Download(session: SessionIdentifier(session.identifier), remoteURL: key, task: task)
                 } else {
                     // We have a task that is not associated with a session at all, lets cancel it
                     task.cancel()
@@ -112,13 +146,10 @@ final class DownloadManager: NSObject {
         monitorDownloadsFolder()
     }
 
-    fileprivate func localStoragePath(for asset: SessionAsset) -> String {
-        return Preferences.shared.localVideoStorageURL.appendingPathComponent(asset.relativeLocalURL).path
-    }
+    func download(_ session: Session) {
+        guard let asset = session.asset(ofType: DownloadManager.downloadQuality) else { return }
 
-    func download(_ asset: SessionAsset) {
         let url = asset.remoteURL
-        let title = asset.session.first?.title ?? "No Title"
 
         if isDownloading(url) || hasVideo(url) {
             return
@@ -126,7 +157,7 @@ final class DownloadManager: NSObject {
 
         let task = backgroundSession.downloadTask(with: URL(string: url)!)
         if let key = task.originalRequest?.url!.absoluteString {
-            downloadTasks[key] = Download(title: title, task: task)
+            downloadTasks[key] = Download(session: SessionIdentifier(session.identifier), remoteURL: key, task: task)
             task.resume()
             NotificationCenter.default.post(name: .DownloadManagerDownloadStarted, object: url)
         } else {
@@ -134,10 +165,9 @@ final class DownloadManager: NSObject {
         }
     }
 
-    func pauseDownload(_ url: String) -> Bool {
+    private func pauseDownload(_ url: String) -> Bool {
         if let download = downloadTasks[url] {
-            download.task.suspend()
-            NotificationCenter.default.post(name: .DownloadManagerDownloadPaused, object: url)
+            download.pause()
             return true
         }
 
@@ -151,8 +181,7 @@ final class DownloadManager: NSObject {
 
     func resumeDownload(_ url: String) -> Bool {
         if let download = downloadTasks[url] {
-            download.task.resume()
-            NotificationCenter.default.post(name: .DownloadManagerDownloadResumed, object: url)
+            download.resume()
             return true
         }
 
@@ -164,38 +193,20 @@ final class DownloadManager: NSObject {
         return false
     }
 
-    func cancelDownload(_ url: String) -> Bool {
-        if let download = downloadTasks[url] {
-            download.task.cancel()
-            return true
-        }
+    func cancelDownload(_ session: Session) -> Bool {
+        guard let url = session.asset(ofType: DownloadManager.downloadQuality)?.remoteURL else { return false }
 
-        os_log("Unable to cancel download of %{public}@ because there's no task for that URL",
-               log: log,
-               type: .error,
-               url)
-
-        return false
+        return cancelDownload(url)
     }
 
-    func isDownloading(_ url: String) -> Bool {
-        return downloadTasks.keys.contains { $0 == url }
-    }
+    func isDownloading(_ session: Session) -> Bool {
+        guard let url = session.asset(ofType: DownloadManager.downloadQuality)?.remoteURL else { return false }
 
-    func localVideoPath(_ remoteURL: String) -> String? {
-        guard let url = URL(string: remoteURL) else { return nil }
-
-        guard let asset = storage.asset(with: url) else {
-            return nil
-        }
-
-        let path = localStoragePath(for: asset)
-
-        return path
+        return isDownloading(url)
     }
 
     func localFileURL(for session: Session) -> URL? {
-        guard let asset = session.asset(ofType: .hdVideo) else { return nil }
+        guard let asset = session.asset(ofType: DownloadManager.downloadQuality) else { return nil }
 
         let path = localStoragePath(for: asset)
 
@@ -204,46 +215,15 @@ final class DownloadManager: NSObject {
         return URL(fileURLWithPath: path)
     }
 
-    func localVideoAbsoluteURLString(_ remoteURL: String) -> String? {
-        guard let localPath = localVideoPath(remoteURL) else { return nil }
+    func hasVideo(_ session: Session) -> Bool {
+        guard let url = session.asset(ofType: DownloadManager.downloadQuality)?.remoteURL else { return false }
 
-        return URL(fileURLWithPath: localPath).absoluteString
+        return hasVideo(url)
     }
 
-    func hasVideo(_ url: String) -> Bool {
-        guard let path = localVideoPath(url) else { return false }
+    func deleteDownloadedFile(for session: Session) {
+        guard let asset = session.asset(ofType: DownloadManager.downloadQuality) else { return }
 
-        return FileManager.default.fileExists(atPath: path)
-    }
-
-    enum RemoveDownloadError: Error {
-        case notDownloaded
-        case fileSystem(Error)
-        case internalError(String)
-    }
-
-    func removeDownload(_ url: String) throws {
-        if isDownloading(url) {
-            _ = cancelDownload(url)
-            return
-        }
-
-        if hasVideo(url) {
-            guard let path = localVideoPath(url) else {
-                throw RemoveDownloadError.internalError("Unable to generate local video path from remote URL")
-            }
-
-            do {
-                try FileManager.default.removeItem(atPath: path)
-            } catch {
-                throw RemoveDownloadError.fileSystem(error)
-            }
-        } else {
-            throw RemoveDownloadError.notDownloaded
-        }
-    }
-
-    func deleteDownload(for asset: SessionAsset) {
         do {
             try removeDownload(asset.remoteURL)
         } catch {
@@ -251,27 +231,32 @@ final class DownloadManager: NSObject {
         }
     }
 
-    func downloadedFileURL(for session: Session) -> URL? {
-        guard let asset = session.asset(ofType: .hdVideo) else {
-            return nil
-        }
+    func downloadStatusObservable(for download: Download) -> Observable<DownloadStatus>? {
+        guard let downloadingAsset = storage.asset(with: URL(string: download.remoteURL)!) else { return nil }
 
-        let path = localStoragePath(for: asset)
-
-        guard FileManager.default.fileExists(atPath: path) else { return nil }
-
-        return URL(fileURLWithPath: path)
+        return downloadStatusObservable(for: downloadingAsset)
     }
 
     func downloadStatusObservable(for session: Session) -> Observable<DownloadStatus>? {
-        guard let asset = session.asset(ofType: .hdVideo) else { return nil }
+        guard let asset = session.asset(ofType: DownloadManager.downloadQuality) else { return nil }
+
+        return downloadStatusObservable(for: asset)
+    }
+
+    func downloadStatusObservable(for asset: SessionAsset) -> Observable<DownloadStatus>? {
 
         return Observable<DownloadStatus>.create { observer -> Disposable in
             let nc = NotificationCenter.default
+            var latestInfo: DownloadInfo = .unknown
 
             let checkDownloadedState = {
-                if self.isDownloading(asset.remoteURL) {
-                    observer.onNext(.downloading(-1))
+                if let download = self.downloadTasks[asset.remoteURL] {
+
+                    if let task = download.task {
+                        latestInfo = DownloadInfo(task: task)
+                    }
+
+                    observer.onNext(.downloading(latestInfo))
                 } else if self.hasVideo(asset.remoteURL) {
                     observer.onNext(.finished)
                 } else {
@@ -293,7 +278,7 @@ final class DownloadManager: NSObject {
 
             let started = nc.dm_addObserver(forName: .DownloadManagerDownloadStarted, filteredBy: asset.remoteURL) { _ in
 
-                observer.onNext(.downloading(-1))
+                observer.onNext(.downloading(.unknown))
             }
 
             let cancelled = nc.dm_addObserver(forName: .DownloadManagerDownloadCancelled, filteredBy: asset.remoteURL) { _ in
@@ -308,7 +293,7 @@ final class DownloadManager: NSObject {
 
             let resumed = nc.dm_addObserver(forName: .DownloadManagerDownloadResumed, filteredBy: asset.remoteURL) { _ in
 
-                observer.onNext(.downloading(-1))
+                observer.onNext(.downloading(latestInfo))
             }
 
             let failed = nc.dm_addObserver(forName: .DownloadManagerDownloadFailed, filteredBy: asset.remoteURL) { note in
@@ -325,9 +310,10 @@ final class DownloadManager: NSObject {
             let progress = nc.dm_addObserver(forName: .DownloadManagerDownloadProgressChanged, filteredBy: asset.remoteURL) { note in
 
                 if let info = note.userInfo?["info"] as? DownloadInfo {
-                    observer.onNext(.downloading(info.progress))
+                    latestInfo = info
+                    observer.onNext(.downloading(info))
                 } else {
-                    observer.onNext(.downloading(-1))
+                    observer.onNext(.downloading(.unknown))
                 }
             }
 
@@ -338,7 +324,76 @@ final class DownloadManager: NSObject {
         }
     }
 
-    // MARK: File observation
+    // MARK: - URL-based Internal API
+
+    fileprivate func localStoragePath(for asset: SessionAsset) -> String {
+        return Preferences.shared.localVideoStorageURL.appendingPathComponent(asset.relativeLocalURL).path
+    }
+
+    private func cancelDownload(_ url: String) -> Bool {
+        if let download = downloadTasks[url] {
+            download.task?.cancel()
+            return true
+        }
+
+        os_log("Unable to cancel download of %{public}@ because there's no task for that URL",
+               log: log,
+               type: .error,
+               url)
+
+        return false
+    }
+
+    private func isDownloading(_ url: String) -> Bool {
+        return downloadTasks.keys.contains { $0 == url }
+    }
+
+    private func lookupAssetLocalVideoPath(remoteURL: String) -> String? {
+        guard let url = URL(string: remoteURL) else { return nil }
+
+        guard let asset = storage.asset(with: url) else {
+            return nil
+        }
+
+        let path = localStoragePath(for: asset)
+
+        return path
+    }
+
+    private func hasVideo(_ url: String) -> Bool {
+        guard let path = lookupAssetLocalVideoPath(remoteURL: url) else { return false }
+
+        return FileManager.default.fileExists(atPath: path)
+    }
+
+    enum RemoveDownloadError: Error {
+        case notDownloaded
+        case fileSystem(Error)
+        case internalError(String)
+    }
+
+    private func removeDownload(_ url: String) throws {
+        if isDownloading(url) {
+            _ = cancelDownload(url)
+            return
+        }
+
+        if hasVideo(url) {
+            guard let path = lookupAssetLocalVideoPath(remoteURL: url) else {
+                throw RemoveDownloadError.internalError("Unable to generate local video path from remote URL")
+            }
+
+            do {
+                try FileManager.default.removeItem(atPath: path)
+            } catch {
+                throw RemoveDownloadError.fileSystem(error)
+            }
+        } else {
+            throw RemoveDownloadError.notDownloaded
+        }
+    }
+
+    // MARK: - File observation
 
     fileprivate var topFolderMonitor: DTFolderMonitor!
     fileprivate var subfoldersMonitors: [DTFolderMonitor] = []
@@ -349,7 +404,7 @@ final class DownloadManager: NSObject {
         updateDownloadedFlagsByEnumeratingFilesAtPath(videosPath)
     }
 
-    func monitorDownloadsFolder() {
+    private func monitorDownloadsFolder() {
         if topFolderMonitor != nil {
             topFolderMonitor.stopMonitoring()
             topFolderMonitor = nil
@@ -391,7 +446,7 @@ final class DownloadManager: NSObject {
         var notPresent = [String]()
 
         for session in expectedOnDisk {
-            if let asset = session.asset(ofType: .hdVideo) {
+            if let asset = session.asset(ofType: DownloadManager.downloadQuality) {
                 if !hasVideo(asset.remoteURL) {
                     notPresent.append(asset.relativeLocalURL)
                 }
@@ -439,7 +494,7 @@ extension DownloadManager: URLSessionDownloadDelegate, URLSessionTaskDelegate {
 
         let originalAbsoluteURLString = originalURL.absoluteString
 
-        guard let localPath = localVideoPath(originalAbsoluteURLString) else { return }
+        guard let localPath = lookupAssetLocalVideoPath(remoteURL: originalAbsoluteURLString) else { return }
         let destinationUrl = URL(fileURLWithPath: localPath)
         let destinationDir = destinationUrl.deletingLastPathComponent()
 
@@ -475,17 +530,30 @@ extension DownloadManager: URLSessionDownloadDelegate, URLSessionTaskDelegate {
         }
     }
 
-    fileprivate struct DownloadInfo {
+    struct DownloadInfo {
         let totalBytesWritten: Int64
         let totalBytesExpectedToWrite: Int64
         let progress: Double
+
+        init(task: URLSessionTask) {
+            totalBytesExpectedToWrite = task.countOfBytesExpectedToReceive
+            totalBytesWritten = task.countOfBytesReceived
+            progress = Double(totalBytesWritten) / Double(totalBytesExpectedToWrite)
+        }
+
+        init(totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64, progress: Double) {
+            self.totalBytesWritten = totalBytesWritten
+            self.totalBytesExpectedToWrite = totalBytesExpectedToWrite
+            self.progress = progress
+        }
+
+        static let unknown = DownloadInfo(totalBytesWritten: 0, totalBytesExpectedToWrite: 0, progress: -1)
     }
 
     func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didWriteData bytesWritten: Int64, totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64) {
         guard let originalURL = downloadTask.originalRequest?.url?.absoluteString else { return }
 
-        let progress = Double(totalBytesWritten) / Double(totalBytesExpectedToWrite)
-        let info = DownloadInfo(totalBytesWritten: totalBytesWritten, totalBytesExpectedToWrite: totalBytesExpectedToWrite, progress: progress)
+        let info = DownloadInfo(task: downloadTask)
         NotificationCenter.default.post(name: .DownloadManagerDownloadProgressChanged, object: originalURL, userInfo: ["info": info])
     }
 }
