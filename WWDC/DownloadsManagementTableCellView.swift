@@ -12,14 +12,45 @@ final class DownloadsManagementTableCellView: NSTableCellView {
 
     static var byteCounterFormatter: ByteCountFormatter = {
         let formatter = ByteCountFormatter()
-        formatter.allowedUnits = [ByteCountFormatter.Units.useMB, .useGB]
+        formatter.allowedUnits = [.useMB, .useGB]
         formatter.zeroPadsFractionDigits = true
         return formatter
     }()
 
+    static func statusString(for info: DownloadManager.DownloadInfo) -> String {
+        var status = ""
+
+        // TODO: Show an explicitly paused status, and/or update the sorting algorithm
+        // so that running downloads show up above paused downloads
+        if info.totalBytesExpectedToWrite == 0 {
+            status = "Waiting..."
+        } else {
+            let formatter = DownloadsManagementTableCellView.byteCounterFormatter
+
+            status += "\(formatter.string(fromByteCount: info.totalBytesWritten))"
+            status += " of "
+            status += "\(formatter.string(fromByteCount: info.totalBytesExpectedToWrite))"
+        }
+
+        return status
+    }
+
     var disposeBag = DisposeBag()
 
-    var download: DownloadManager.Download?
+    var download: DownloadManager.Download? {
+        didSet {
+            guard let download = download else { return }
+
+            switch download.state {
+            case .running:
+                suspendResumeButton.state = .off
+            case .suspended:
+                suspendResumeButton.state = .on
+            case .canceling, .completed: ()
+                suspendResumeButton.isHidden = true
+            }
+        }
+    }
 
     var status: Observable<DownloadStatus>? {
         didSet {
@@ -30,43 +61,25 @@ final class DownloadsManagementTableCellView: NSTableCellView {
             status
                 .throttle(0.1, latest: true, scheduler: MainScheduler.instance)
                 .subscribe(onNext: { [weak self] status in
+                    guard let self = self else { return }
+
                     switch status {
                     case .downloading(let info):
                         if info.totalBytesExpectedToWrite > 0 {
-                            self?.progressIndicator.isIndeterminate = false
-                            self?.progressIndicator.doubleValue = info.progress
-                            self?.downloadStatusLabel.stringValue = "\(DownloadsManagementTableCellView.byteCounterFormatter.string(fromByteCount: info.totalBytesWritten)) of \(DownloadsManagementTableCellView.byteCounterFormatter.string(fromByteCount: info.totalBytesExpectedToWrite))"
+                            self.progressIndicator.isIndeterminate = false
+                            self.progressIndicator.doubleValue = info.progress
                         } else {
-                            self?.progressIndicator.isIndeterminate = true
-                            self?.progressIndicator.startAnimation(nil)
+                            self.progressIndicator.isIndeterminate = true
+                            self.progressIndicator.startAnimation(nil)
                         }
-                    case .paused, .cancelled, .none, .failed:()
-
-                    case .finished: ()
-
+                        self.downloadStatusLabel.stringValue = DownloadsManagementTableCellView.statusString(for: info)
+                    case .finished, .paused, .cancelled, .none, .failed: ()
                     }
             }).disposed(by: disposeBag)
-//            task.rx.observeWeakly(Int64.self, "countOfBytesReceived").throttle(0.1, latest: true, scheduler: MainScheduler.instance).observeOn(MainScheduler.instance).subscribe(onNext: { [weak task] in
-//                guard let task = task else { return }
-//
-//                if task.countOfBytesExpectedToReceive != NSURLSessionTransferSizeUnknown && task.countOfBytesExpectedToReceive != 0 {
-//                    self.progressIndicator.isIndeterminate = false
-//                    self.progressIndicator.maxValue = Double(task.countOfBytesExpectedToReceive)
-//                    self.progressIndicator.minValue = 0
-//                    self.progressIndicator.doubleValue = Double($0 ?? 0)
-//                } else {
-//                    self.progressIndicator.minValue = 0
-//                    self.progressIndicator.maxValue = 0
-//                    self.progressIndicator.isIndeterminate = true
-//                    self.progressIndicator.startAnimation(nil)
-//                }
-//                self.downloadStatusLabel.stringValue = "\(DownloadsManagementTableCellView.byteCounterFormatter.string(fromByteCount: task.countOfBytesReceived)) of \(DownloadsManagementTableCellView.byteCounterFormatter.string(fromByteCount: task.countOfBytesExpectedToReceive))"
-//            }).disposed(by: disposeBag)
         }
     }
 
     override init(frame frameRect: NSRect) {
-
         super.init(frame: frameRect)
 
         setup()
@@ -77,7 +90,7 @@ final class DownloadsManagementTableCellView: NSTableCellView {
     }
 
     lazy var sessionTitleLabel: NSTextField = {
-        let l = VibrantTextField(labelWithString: "What's New In Swift")
+        let l = VibrantTextField(labelWithString: "")
         l.font = .systemFont(ofSize: 13)
         l.textColor = .labelColor
         l.isSelectable = true
@@ -87,7 +100,7 @@ final class DownloadsManagementTableCellView: NSTableCellView {
     }()
 
     private lazy var downloadStatusLabel: NSTextField = {
-        let l = VibrantTextField(labelWithString: "0 of 0 - 0 seconds remaining")
+        let l = VibrantTextField(labelWithString: "")
         l.font = NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .regular)
         l.textColor = .labelColor
         l.isSelectable = true

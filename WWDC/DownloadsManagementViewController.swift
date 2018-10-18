@@ -66,6 +66,7 @@ class DownloadsManagementViewController: NSViewController {
 
     let downloadManager: DownloadManager
     let storage: Storage
+    var disposeBag = DisposeBag()
 
     var downloads = [DownloadManager.Download]() {
         didSet {
@@ -94,9 +95,34 @@ class DownloadsManagementViewController: NSViewController {
         super.init(nibName: nil, bundle: nil)
 
         // TODO: memory management
-        downloadManager.downloadsObservable.subscribe(onNext: {
-            self.downloads = $0.sorted(by: <)
-        })
+        let disposeBag = self.disposeBag
+        downloadManager
+            .downloadsObservable
+            .subscribe(onNext: { [weak disposeBag, weak self] in
+                guard let disposeBag = disposeBag else { return }
+                guard let self = self else { return }
+
+                self.downloads = $0.sorted(by: <)
+
+                let statusObserverables = $0.compactMap { downloadManager.downloadStatusObservable(for: $0) }
+
+                let allStatuses = Observable.combineLatest(statusObserverables)
+
+                // TODO: Overall progress
+//                allStatuses
+//                    .map {
+//                        $0.reduce(, <#T##nextPartialResult: (Result, DownloadStatus) throws -> Result##(Result, DownloadStatus) throws -> Result#>)
+//                    }
+
+                allStatuses
+                    .throttle(4, scheduler: ConcurrentDispatchQueueScheduler(qos: .background))
+                    .observeOn(MainScheduler.instance)
+                    .subscribe(onNext: { [weak self] _ in
+                        guard let self = self else { return }
+                        // Occassionally reorder the list to keep running downloads at the top, etc
+                        self.downloads.sort(by: <)
+                    }).disposed(by: disposeBag)
+            }).disposed(by: disposeBag)
     }
 
     required init?(coder: NSCoder) {

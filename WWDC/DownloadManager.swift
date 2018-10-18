@@ -52,6 +52,8 @@ extension URL {
 
 final class DownloadManager: NSObject {
 
+    // Changing this dynamically isn't supported. Delete all downloads when switching
+    // from one quality to another otherwise you'll encounter minor unexpected behavior
     static let downloadQuality = SessionAssetType.hdVideo
 
     struct Download {
@@ -205,7 +207,7 @@ final class DownloadManager: NSObject {
         return isDownloading(url)
     }
 
-    func localFileURL(for session: Session) -> URL? {
+    func downloadedFileURL(for session: Session) -> URL? {
         guard let asset = session.asset(ofType: DownloadManager.downloadQuality) else { return nil }
 
         let path = localStoragePath(for: asset)
